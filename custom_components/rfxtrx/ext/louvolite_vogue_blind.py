@@ -11,11 +11,15 @@ from homeassistant.const import (
 )
 from .const import (
     CONF_CLOSE_SECONDS,
+    CONF_COLOUR_ICON,
     CONF_OPEN_SECONDS,
     CONF_CUSTOM_ICON,
+    CONF_COLOUR_ICON,
     DEF_CLOSE_SECONDS,
+    DEF_COLOUR_ICON,
     DEF_OPEN_SECONDS,
     DEF_CUSTOM_ICON,
+    DEF_COLOUR_ICON
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,8 +51,6 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
                          2,  #  2 steps to mid point
                          True,  # Supports mid point
                          False,  # Does not support lift
-                         entity_info.get(CONF_CUSTOM_ICON,
-                                         DEF_CUSTOM_ICON),  # Use custom icon
                          False,  # Do not lift on open
                          False,  # Does not require sync on mid point
                          min(openSecs, closeSecs),  # Open time
@@ -56,6 +58,9 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
                          max(openSecs, closeSecs),  # Sync time ms
                          2000  # Ms for each step
                          )
+        self._customIcon = entity_info.get(CONF_CUSTOM_ICON, DEF_CUSTOM_ICON)
+        self._colourIcon = entity_info.get(CONF_COLOUR_ICON, DEF_COLOUR_ICON)
+
         _LOGGER.info("Create Louvolite Vogue tilting blind " + str(device_id))
 
     @property
@@ -63,19 +68,29 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
         """Return the icon property."""
         if self._customIcon:
             if self.is_opening or self.is_closing:
-                icon = ICON_PATH + "/move.png"
+                icon = "move.png"
+                closed = False
             else:
                 tilt = self._steps_to_tilt(self._tilt_step)
                 if tilt <= 15:
-                    icon = ICON_PATH + "/00.png"
+                    icon = "00.png"
+                    closed = True
                 elif tilt <= 40:
-                    icon = ICON_PATH + "/25.png"
+                    icon = "25.png"
+                    closed = False
                 elif tilt <= 60:
-                    icon = ICON_PATH + "/50.png"
+                    icon = "50.png"
+                    closed = False
                 elif tilt <= 85:
-                    icon = ICON_PATH + "/75.png"
+                    icon = "75.png"
+                    closed = False
                 else:
-                    icon = ICON_PATH + "/99.png"
+                    icon = "99.png"
+                    closed = True
+            if self._colourIcon and not(closed):
+                icon = ICON_PATH + "/active/" + icon
+            else:
+                icon = ICON_PATH + "/inactive/" + icon
             _LOGGER.debug("Returned icon attribute = " + icon)
         else:
             icon = None

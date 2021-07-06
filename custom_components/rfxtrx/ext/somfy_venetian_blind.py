@@ -24,13 +24,15 @@ from .const import (
     CONF_TILT_POS1_MS,
     CONF_TILT_POS2_MS,
     CONF_CUSTOM_ICON,
+    CONF_COLOUR_ICON,
     DEF_CLOSE_SECONDS,
     DEF_OPEN_SECONDS,
     DEF_STEPS_MID,
     DEF_SYNC_SECONDS,
     DEF_TILT_POS1_MS,
     DEF_TILT_POS2_MS,
-    DEF_CUSTOM_ICON
+    DEF_CUSTOM_ICON,
+    DEF_COLOUR_ICON
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -70,8 +72,6 @@ class SomfyVenetianBlind(AbstractTiltingCover):
                          2,  # Currently support 2 steps to mid point
                          True,  # Supports mid point
                          True,  # Supports lift
-                         entity_info.get(CONF_CUSTOM_ICON,
-                                         DEF_CUSTOM_ICON),  # Use custom icon
                          False,  # Do not lift on open
                          False,  # Sync on mid point
                          entity_info.get(CONF_OPEN_SECONDS,
@@ -89,36 +89,55 @@ class SomfyVenetianBlind(AbstractTiltingCover):
         self._tiltPos2Sec = entity_info.get(
             CONF_TILT_POS2_MS, DEF_TILT_POS2_MS) / 1000
 
+        self._customIcon = entity_info.get(CONF_CUSTOM_ICON, DEF_CUSTOM_ICON)
+        self._colourIcon = entity_info.get(CONF_COLOUR_ICON, DEF_COLOUR_ICON)
+
     @property
     def entity_picture(self):
         """Return the icon property."""
         if self._customIcon:
             if self.is_opening or self.is_closing:
-                icon = ICON_PATH + "/move.png"
+                icon = "move.png"
+                closed = False
             elif self._lift_position == BLIND_POS_CLOSED:
                 tilt = self._steps_to_tilt(self._tilt_step)
                 if tilt <= 12:
-                    icon = ICON_PATH + "/10.png"
+                    icon = "10.png"
+                    closed = True
                 elif tilt <= 25:
-                    icon = ICON_PATH + "/20.png"
+                    icon = "20.png"
+                    closed = True
                 elif tilt <= 35:
-                    icon = ICON_PATH + "/30.png"
+                    icon = "30.png"
+                    closed = False
                 elif tilt <= 45:
-                    icon = ICON_PATH + "/40.png"
+                    icon = "40.png"
+                    closed = False
                 elif tilt <= 55:
-                    icon = ICON_PATH + "/50.png"
+                    icon = "50.png"
+                    closed = False
                 elif tilt <= 65:
-                    icon = ICON_PATH + "/60.png"
+                    icon = "60.png"
+                    closed = False
                 elif tilt <= 75:
-                    icon = ICON_PATH + "/70.png"
+                    icon = "70.png"
+                    closed = True
                 elif tilt <= 85:
-                    icon = ICON_PATH + "/80.png"
+                    icon = "80.png"
+                    closed = True
                 else:
-                    icon = ICON_PATH + "/90.png"
+                    icon = "90.png"
+                    closed = True
             elif self._lift_position == BLIND_POS_OPEN:
-                icon = ICON_PATH + "/up.png"
+                icon = "up.png"
+                closed = False
             else:
-                icon = ICON_PATH + "/down.png"
+                icon = "down.png"
+                closed = True
+            if self._colourIcon and not(closed):
+                icon = ICON_PATH + "/active/" + icon
+            else:
+                icon = ICON_PATH + "/inactive/" + icon
             _LOGGER.debug("Returned icon attribute = " + icon)
         else:
             icon = None

@@ -76,11 +76,10 @@ COMMAND_DEBOUNCE_SEC = 0.5
 class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
     """Representation of a RFXtrx cover supporting tilt and, optionally, lift."""
 
-    def __init__(self, device, device_id, signal_repetitions, event, midSteps, hasMid, hasLift, customIcon, liftOnOpen, syncMid, openSecs, closeSecs, syncMs, repeatStepMs):
+    def __init__(self, device, device_id, signal_repetitions, event, midSteps, hasMid, hasLift, liftOnOpen, syncMid, openSecs, closeSecs, syncMs, repeatStepMs):
         self._syncMidPos = syncMid
         self._hasMidCommand = hasMid
         self._hasLift = hasLift
-        self._customIcon = customIcon
         self._liftOnOpen = liftOnOpen
         self._blindMidSteps = midSteps
         self._blindCloseSecs = closeSecs
@@ -100,7 +99,6 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
                      " syncSecs=" + str(self._blindSyncSecs) +
                      " stepSecs=" + str(self._blindRepeatStepSecs) +
                      " hasLift=" + str(self._hasLift) +
-                     " customIcon=" + str(self._customIcon) +
                      " liftOnOpen=" + str(self._liftOnOpen) +
                      " hasMidCommand=" + str(self._hasMidCommand) +
                      " syncMidPos=" + str(self._syncMidPos))

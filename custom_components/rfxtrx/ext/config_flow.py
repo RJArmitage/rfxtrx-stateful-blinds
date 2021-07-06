@@ -11,6 +11,7 @@ from .const import (
     DEF_TILT_POS1_MS,
     DEF_TILT_POS2_MS,
     DEF_CUSTOM_ICON,
+    DEF_COLOUR_ICON,
     CONF_CLOSE_SECONDS,
     CONF_OPEN_SECONDS,
     CONF_SYNC_SECONDS,
@@ -20,6 +21,7 @@ from .const import (
     CONF_TILT_POS1_MS,
     CONF_TILT_POS2_MS,
     CONF_CUSTOM_ICON,
+    CONF_COLOUR_ICON,
     DEVICE_PACKET_TYPE_RFY,
     DEVICE_PACKET_TYPE_BLINDS1,
     DEVICE_PACKET_SUBTYPE_BLINDST19
@@ -45,6 +47,8 @@ def update_device_options(device, user_input):
         CONF_TILT_POS2_MS, DEF_TILT_POS2_MS)
     device[CONF_CUSTOM_ICON] = user_input.get(
         CONF_CUSTOM_ICON, DEF_CUSTOM_ICON)
+    device[CONF_COLOUR_ICON] = user_input.get(
+        CONF_COLOUR_ICON, DEF_COLOUR_ICON)
 
 
 def update_data_schema(data_schema, device_object, device_data):
@@ -95,6 +99,11 @@ def update_data_schema(data_schema, device_object, device_data):
                         CONF_CUSTOM_ICON,
                         default=device_data.get(
                             CONF_CUSTOM_ICON, DEF_CUSTOM_ICON),
+                    ): bool,
+                    vol.Optional(
+                        CONF_COLOUR_ICON,
+                        default=device_data.get(
+                            CONF_COLOUR_ICON, DEF_COLOUR_ICON),
                     ): bool
                 }
             )
@@ -116,6 +125,11 @@ def update_data_schema(data_schema, device_object, device_data):
                         CONF_CUSTOM_ICON,
                         default=device_data.get(
                             CONF_CUSTOM_ICON, DEF_CUSTOM_ICON),
+                    ): bool,
+                    vol.Optional(
+                        CONF_COLOUR_ICON,
+                        default=device_data.get(
+                            CONF_COLOUR_ICON, DEF_COLOUR_ICON),
                     ): bool
                 }
             )

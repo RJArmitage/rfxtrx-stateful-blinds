@@ -2,6 +2,7 @@ CONF_CLOSE_SECONDS = "close_seconds"
 CONF_OPEN_SECONDS = "open_seconds"
 CONF_SYNC_SECONDS = "sync_seconds"
 CONF_CUSTOM_ICON = "custom_icon"
+CONF_COLOUR_ICON = "colour_icon"
 
 CONF_SUPPORTS_MID = "midpoint_supported"
 CONF_STEPS_MID = "midpoint_steps"
@@ -17,6 +18,7 @@ DEF_SUPPORTS_MID = False
 DEF_STEPS_MID = 10
 DEF_SYNC_MID = False
 DEF_CUSTOM_ICON = True
+DEF_COLOUR_ICON = True
 
 DEF_TILT_POS1_MS = 1750
 DEF_TILT_POS2_MS = 1750

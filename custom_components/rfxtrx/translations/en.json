@@ -75,7 +75,8 @@
           "sync_seconds": "Mid open/close time (ms)",
           "tilt1_ms": "Lower tilt time from midpoint (ms)",
           "tilt2_ms": "Upper tilt time from midpoint (ms)",
-          "custom_icon": "Custom cover icon"
+          "custom_icon": "Custom cover icon",
+          "colour_icon": "Highlight open cover"
         },
         "title": "Configure device options"
       }
