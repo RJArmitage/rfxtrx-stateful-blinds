@@ -1,0 +1,39 @@
+send:
+  description: Sends a raw event on radio.
+  fields:
+    event:
+      description: A hexadecimal string to send.
+      example: '0b11009e00e6116202020070'
+
+update_cover_position:
+  description: Update position of a specific cover.
+  fields:
+    entity_id:
+      description: Name(s) of cover(s) to update cover position.
+      example: 'cover.living_room'
+    position:
+      description: Position of the cover (0 to 100).
+      example: 30
+    tilt_position:
+      description: Tilt position of the cover (0 to 100).
+      example: 30
+
+increase_cover_tilt:
+  description: Increase tilt position of a specific cover.
+  fields:
+    entity_id:
+      description: Name(s) of cover(s) to update tilt position.
+      example: 'cover.living_room'
+    repeat_automatically:
+      description: Repeat tilt operation until cancelled
+      example: True
+
+decrease_cover_tilt:
+  description: Decrease tilt position of a specific cover.
+  fields:
+    entity_id:
+      description: Name(s) of cover(s) to update tilt position.
+      example: 'cover.living_room'
+    repeat_automatically:
+      description: Repeat tilt operation until cancelled
+      example: True
