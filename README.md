@@ -4,7 +4,7 @@ This component extends the built-in Home Assistant integration for RFXtrx covers
 
 - _State?_ The idea is that a blind has some idea of whether it is up, down, tilted or whatever and by how much.
 - _Why is that useful?_ If you only control blinds via a controller then it isn't. You can see the blind and know which button to press on your controller to get what you want. If it's half closed and you wasnt it fully closed then you'll press the button to get what you want. However, if you are using a script then that doesn't work. Also, some blinds - such as my Somfy blinds - react differently to the same controller operation depending upon their state. Again in a script that's no use. A script needs a consistent result to an order.
-- _So what does this give me?_ With state in home assistant then the component will know how much tilt the blind currently has so that it knows how much extra tilt to apply to get the requested result. So, if the blind is currently 20% tilted and we want 70% tilt, the component knows to apply 50% more tilt to what it already has.
+- _So what does this give me?_ With state in Home Assistant then the component will know how much tilt the blind currently has so that it knows how much extra tilt to apply to get the requested result. So, if the blind is currently 20% tilted and we want 70% tilt, the component knows to apply 50% more tilt to what it already has.
 
 # Why does it exist? Do I need it?
 
@@ -66,6 +66,7 @@ At the moment the component does not support the full tilt operations that the m
 - **Lower tilt time from midpoint (ms)** - The component simulates a 25% tilt operation by tilting to the mid point and then closing the blind for this number of milliseconds. This is not ideal and will be removed if better tilt support is added to RFXtrx.
 - **Upper tilt time from midpoint (ms)** - The component simulates a 75% tilt operation by tilting to the mid point and then lifting the blind for this number of milliseconds. Again this will be removed if better tilt support is added to RFXtrx.
 - **Custom cover icon** - Select to use an icon showing the state of the cover.
+- **Highlight open cover** - Select to show open covers using a highlight colour. In this case "open" means a cover where it is likely to be possible to see through from outside.
 
 At present the blind is able to provide three open tilt positions. The Somfy motor can do better than this and if better support is added to RFXtrx then the component will provide it.
 
@@ -80,6 +81,7 @@ The Louvolite Vogue vertical blinds motor allows the blinds to be tilted to 0, 4
 - **Open time (secs)** - Number of seconds that the blind requires to completely open to 50%. Allow the time for the worst case which would be that the blind starts fully closed.
 - **Close time (secs)** - Number of seconds that the blind requires to completely close. Allow the time for the worst case which would be that the blind is tilted to the opposite close position.
 - **Custom cover icon** - Select to use an icon showing the state of the cover.
+- **Highlight open cover** - Select to show open covers using a highlight colour. In this case "open" means a cover where it is likely to be possible to see through from outside.
 
 ## Service Operations
 

@@ -223,7 +223,6 @@ class OptionsFlow(OldOptionsFlow):
 class ConfigFlow(OldConfigFlow, domain=DOMAIN):
 
     VERSION = 1
-    CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_PUSH
 
     def __init__(self):
         _LOGGER.info("Called __init__ on local ConfigFlow")
