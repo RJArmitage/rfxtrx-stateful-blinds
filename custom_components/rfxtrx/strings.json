@@ -68,7 +68,8 @@
           "tilt1_ms": "Lower tilt time from midpoint (ms)",
           "tilt2_ms": "Upper tilt time from midpoint (ms)",
           "custom_icon": "Custom cover icon",
-          "colour_icon": "Highlight open cover"
+          "colour_icon": "Highlight open cover",
+          "signal_repetition_delay": "Delay between signal repetitions (ms)"
         },
         "title": "Configure device options"
       }
@@ -80,6 +81,16 @@
       "invalid_input_2262_off": "Invalid input for command off",
       "invalid_input_off_delay": "Invalid input for off delay",
       "unknown": "[%key:common::config_flow::error::unknown%]"
+    }
+  },
+  "device_automation": {
+    "action_type": {
+      "send_status": "Send status update: {subtype}",
+      "send_command": "Send command: {subtype}"
+    },
+    "trigger_type": {
+      "status": "Received status: {subtype}",
+      "command": "Received command: {subtype}"
     }
   }
 }

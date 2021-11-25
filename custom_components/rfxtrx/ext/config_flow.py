@@ -12,6 +12,7 @@ from .const import (
     DEF_TILT_POS2_MS,
     DEF_CUSTOM_ICON,
     DEF_COLOUR_ICON,
+    DEF_SIGNAL_REPETITIONS_DELAY_MS,
     CONF_CLOSE_SECONDS,
     CONF_OPEN_SECONDS,
     CONF_SYNC_SECONDS,
@@ -22,6 +23,7 @@ from .const import (
     CONF_TILT_POS2_MS,
     CONF_CUSTOM_ICON,
     CONF_COLOUR_ICON,
+    CONF_SIGNAL_REPETITIONS_DELAY_MS,
     DEVICE_PACKET_TYPE_RFY,
     DEVICE_PACKET_TYPE_BLINDS1,
     DEVICE_PACKET_SUBTYPE_BLINDST19
@@ -49,6 +51,8 @@ def update_device_options(device, user_input):
         CONF_CUSTOM_ICON, DEF_CUSTOM_ICON)
     device[CONF_COLOUR_ICON] = user_input.get(
         CONF_COLOUR_ICON, DEF_COLOUR_ICON)
+    device[CONF_SIGNAL_REPETITIONS_DELAY_MS] = user_input.get(
+        CONF_SIGNAL_REPETITIONS_DELAY_MS, DEF_SIGNAL_REPETITIONS_DELAY_MS)
 
 
 def update_data_schema(data_schema, device_object, device_data):
@@ -70,6 +74,11 @@ def update_data_schema(data_schema, device_object, device_data):
                     #     CONF_STEPS_MID,
                     #     default=device_data.get(CONF_STEPS_MID, DEF_STEPS_MID),
                     # ): int,
+                    vol.Optional(
+                        CONF_SIGNAL_REPETITIONS_DELAY_MS,
+                        default=device_data.get(
+                            CONF_SIGNAL_REPETITIONS_DELAY_MS, DEF_SIGNAL_REPETITIONS_DELAY_MS),
+                    ): int,
                     vol.Optional(
                         CONF_OPEN_SECONDS,
                         default=device_data.get(
@@ -111,6 +120,11 @@ def update_data_schema(data_schema, device_object, device_data):
             # Add Lovolite Vogue vertical tilt options
             data_schema.update(
                 {
+                    vol.Optional(
+                        CONF_SIGNAL_REPETITIONS_DELAY_MS,
+                        default=device_data.get(
+                            CONF_SIGNAL_REPETITIONS_DELAY_MS, DEF_SIGNAL_REPETITIONS_DELAY_MS),
+                    ): int,
                     vol.Optional(
                         CONF_OPEN_SECONDS,
                         default=device_data.get(

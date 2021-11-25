@@ -17,7 +17,6 @@ from homeassistant.core import callback
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.rfxtrx import (
     CONF_DATA_BITS,
-    CONF_SIGNAL_REPETITIONS,
     get_device_id,
     DOMAIN
 )

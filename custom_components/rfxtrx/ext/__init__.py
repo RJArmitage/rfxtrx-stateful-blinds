@@ -1,7 +1,6 @@
 import logging
 import voluptuous as vol
 from homeassistant.components.rfxtrx.cover import RfxtrxCover
-from homeassistant.components.rfxtrx import CONF_SIGNAL_REPETITIONS
 from homeassistant.helpers import entity_platform
 from homeassistant.components.cover import (
     SUPPORT_SET_POSITION,
@@ -12,7 +11,8 @@ from homeassistant.components.cover import (
 from homeassistant.components.rfxtrx.const import (
     CONF_VENETIAN_BLIND_MODE,
     CONST_VENETIAN_BLIND_MODE_EU,
-    CONST_VENETIAN_BLIND_MODE_US
+    CONST_VENETIAN_BLIND_MODE_US,
+    CONF_SIGNAL_REPETITIONS
 )
 from .louvolite_vogue_blind import LouvoliteVogueBlind
 from .somfy_venetian_blind import SomfyVenetianBlind

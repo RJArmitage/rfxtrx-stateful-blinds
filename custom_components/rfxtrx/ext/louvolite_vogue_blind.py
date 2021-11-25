@@ -1,5 +1,7 @@
 import logging
-from homeassistant.components.rfxtrx import CONF_SIGNAL_REPETITIONS
+from homeassistant.components.rfxtrx.const import (
+    CONF_SIGNAL_REPETITIONS
+)
 from .abs_tilting_cover import (
     AbstractTiltingCover,
     BLIND_POS_CLOSED
@@ -15,11 +17,13 @@ from .const import (
     CONF_OPEN_SECONDS,
     CONF_CUSTOM_ICON,
     CONF_COLOUR_ICON,
+    CONF_SIGNAL_REPETITIONS_DELAY_MS,
     DEF_CLOSE_SECONDS,
     DEF_COLOUR_ICON,
     DEF_OPEN_SECONDS,
     DEF_CUSTOM_ICON,
-    DEF_COLOUR_ICON
+    DEF_COLOUR_ICON,
+    DEF_SIGNAL_REPETITIONS_DELAY_MS
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,7 +51,10 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
         closeSecs = entity_info.get(CONF_CLOSE_SECONDS, DEF_CLOSE_SECONDS)
 
         super().__init__(device, device_id,
-                         entity_info[CONF_SIGNAL_REPETITIONS], event,
+                         entity_info[CONF_SIGNAL_REPETITIONS],
+                         entity_info.get(
+                             CONF_SIGNAL_REPETITIONS_DELAY_MS, DEF_SIGNAL_REPETITIONS_DELAY_MS),
+                         event,
                          2,  #  2 steps to mid point
                          True,  # Supports mid point
                          False,  # Does not support lift
@@ -118,7 +125,7 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
         delay = self._blindOpenSecs if steps <= 2 else self._blindCloseSecs
 
         await self._set_state(movement, BLIND_POS_CLOSED, self._tilt_step)
-        await self._async_send(self._device.send_command, command)
+        await self._async_send_command(command)
         await self._wait_and_set_state(delay, movement, STATE_CLOSED, BLIND_POS_CLOSED, target)
         return target
 
@@ -126,19 +133,19 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
         """Callback to close the blind"""
         _LOGGER.info("LOUVOLITE CLOSING BLIND")
         await self._set_state(STATE_CLOSING, BLIND_POS_CLOSED, self._tilt_step)
-        await self._async_send(self._device.send_command, CMD_VOGUE_CLOSE_CCW)
+        await self._async_send_command(CMD_VOGUE_CLOSE_CCW)
         return self._blindCloseSecs
 
     async def _async_do_open_blind(self):
         """Callback to open the blind"""
         _LOGGER.info("LOUVOLITE OPENING BLIND")
         await self._set_state(STATE_OPENING, BLIND_POS_CLOSED, self._tilt_step)
-        await self._async_send(self._device.send_command, CMD_VOGUE_90_DEGREES)
+        await self._async_send_command(CMD_VOGUE_90_DEGREES)
         return self._blindOpenSecs
 
     async def _async_do_tilt_blind_to_mid(self):
         """Callback to tilt the blind to mid"""
         _LOGGER.info("LOUVOLITE TILTING BLIND TO MID")
         await self._set_state(STATE_OPENING, BLIND_POS_CLOSED, self._tilt_step)
-        await self._async_send(self._device.send_command, CMD_VOGUE_90_DEGREES)
+        await self._async_send_command(CMD_VOGUE_90_DEGREES)
         return self._blindOpenSecs

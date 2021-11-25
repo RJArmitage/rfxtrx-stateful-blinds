@@ -76,22 +76,26 @@ COMMAND_DEBOUNCE_SEC = 0.5
 class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
     """Representation of a RFXtrx cover supporting tilt and, optionally, lift."""
 
-    def __init__(self, device, device_id, signal_repetitions, event, midSteps, hasMid, hasLift, liftOnOpen, syncMid, openSecs, closeSecs, syncMs, repeatStepMs):
+    def __init__(self, device, device_id, signal_repetitions, signal_repetitions_delay, event, midSteps, hasMid, hasLift, liftOnOpen, syncMid, openSecs, closeSecs, syncMs, repeatStepMs):
         self._syncMidPos = syncMid
         self._hasMidCommand = hasMid
         self._hasLift = hasLift
         self._liftOnOpen = liftOnOpen
+        self._repetitionDelay = signal_repetitions_delay / 1000
         self._blindMidSteps = midSteps
         self._blindCloseSecs = closeSecs
         self._blindOpenSecs = openSecs
         self._blindSyncSecs = syncMs / 1000
         self._blindRepeatStepSecs = repeatStepMs / 1000
         self._blindMaxSteps = int(self._blindMidSteps * 2)
+        self._signalRepetitions = signal_repetitions
+        self._signalRepetitionsDelay = signal_repetitions_delay / 1000
 
-        super().__init__(device, device_id, signal_repetitions, event)
+        super().__init__(device, device_id, 1, event)
 
         _LOGGER.info("New tilting cover config," +
-                     " signal_repetitions=" + str(signal_repetitions) +
+                     " signal_repetitions=" + str(self._signalRepetitions) +
+                     " signal_repetitions_delay=" + str(self._signalRepetitionsDelay) +
                      " midSteps=" + str(self._blindMidSteps) +
                      " maxSteps=" + str(self._blindMaxSteps) +
                      " openSecs=" + str(self._blindOpenSecs) +
@@ -473,7 +477,7 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
                         self._autoStepActive = False
                     else:
                         await self._async_set_cover_tilt_step(newTilt)
-                        _LOGGER.info("Waiting repeast secs = " +
+                        _LOGGER.info("Waiting repeat secs = " +
                                      str(self._blindRepeatStepSecs))
                         await asyncio.sleep(self._blindRepeatStepSecs)
                         steps = steps - 1
@@ -530,6 +534,10 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
     async def _async_send_command(self, cmd):
         """Send a command to the blind"""
         _LOGGER.info("LOW-LEVEL SENDING BLIND COMMAND - " + str(cmd))
+        if self._signalRepetitions >= 2:
+            for _ in range(self._signalRepetitions - 1):
+                await self._async_send(self._device.send_command, cmd)
+                await asyncio.sleep(self._signalRepetitionsDelay)
         await self._async_send(self._device.send_command, cmd)
 
     # Handle updates from cover device
