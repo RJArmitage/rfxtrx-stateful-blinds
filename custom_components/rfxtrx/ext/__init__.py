@@ -16,7 +16,10 @@ from homeassistant.components.rfxtrx.const import (
 )
 from .louvolite_vogue_blind import LouvoliteVogueBlind
 from .somfy_venetian_blind import SomfyVenetianBlind
+from .somfy_roller_blind import SomfyRollerBlind
 from .const import (
+    CONF_STATE_SUPPORT,
+    DEF_STATE_SUPPORT,
     DEVICE_PACKET_TYPE_RFY,
     DEVICE_PACKET_TYPE_BLINDS1,
     DEVICE_PACKET_SUBTYPE_BLINDST19,
@@ -70,18 +73,25 @@ def create_cover_entity(device, device_id, entity_info, event=None):
     _LOGGER.info("Device ID " + str(device_id))
     _LOGGER.info("Info " + str(entity_info))
 
-    if int(device_id[0], 16) == DEVICE_PACKET_TYPE_BLINDS1 and int(device_id[1], 16) == DEVICE_PACKET_SUBTYPE_BLINDST19:
-        _LOGGER.info(
-            "Detected a Louvolite Vogue vertical blind - let's go stateful!")
-        return LouvoliteVogueBlind(device, device_id, entity_info)
-    elif int(device_id[0], 16) == DEVICE_PACKET_TYPE_RFY:
-        venetian_blind_mode = entity_info.get(CONF_VENETIAN_BLIND_MODE)
-        if venetian_blind_mode in (CONST_VENETIAN_BLIND_MODE_US, CONST_VENETIAN_BLIND_MODE_EU):
+    stateSupport = entity_info.get(CONF_STATE_SUPPORT, DEF_STATE_SUPPORT)
+    if stateSupport:
+        if int(device_id[0], 16) == DEVICE_PACKET_TYPE_BLINDS1 and int(device_id[1], 16) == DEVICE_PACKET_SUBTYPE_BLINDST19:
             _LOGGER.info(
-                "Detected a Somfy RFY venetian blind - let's go stateful!")
-            return SomfyVenetianBlind(device, device_id, entity_info)
+                "Detected a Louvolite Vogue vertical blind - let's go stateful!")
+            return LouvoliteVogueBlind(device, device_id, entity_info)
+        elif int(device_id[0], 16) == DEVICE_PACKET_TYPE_RFY:
+            venetian_blind_mode = entity_info.get(CONF_VENETIAN_BLIND_MODE)
+            if venetian_blind_mode in (CONST_VENETIAN_BLIND_MODE_US, CONST_VENETIAN_BLIND_MODE_EU):
+                _LOGGER.info(
+                    "Detected a Somfy RFY venetian blind - let's go stateful!")
+                return SomfyVenetianBlind(device, device_id, entity_info)
+            else:
+                _LOGGER.info(
+                    "Detected a Somfy RFY roller blind - let's go stateful!")
+                return SomfyRollerBlind(device, device_id, entity_info)
 
     _LOGGER.info("Created default RFXTRX cover " + device_id[2][0:2])
-    return RfxtrxCover(device, device_id,
+    return RfxtrxCover(device,
+                       device_id,
                        signal_repetitions=entity_info[CONF_SIGNAL_REPETITIONS],
                        venetian_blind_mode=entity_info.get(CONF_VENETIAN_BLIND_MODE))

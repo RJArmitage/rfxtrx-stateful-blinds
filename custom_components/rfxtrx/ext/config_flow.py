@@ -2,6 +2,7 @@ import voluptuous as vol
 import logging
 from homeassistant.components.rfxtrx.cover import supported as cover_supported
 from .const import (
+    DEF_STATE_SUPPORT,
     DEF_CLOSE_SECONDS,
     DEF_OPEN_SECONDS,
     DEF_SYNC_SECONDS,
@@ -13,6 +14,7 @@ from .const import (
     DEF_CUSTOM_ICON,
     DEF_COLOUR_ICON,
     DEF_SIGNAL_REPETITIONS_DELAY_MS,
+    CONF_STATE_SUPPORT,
     CONF_CLOSE_SECONDS,
     CONF_OPEN_SECONDS,
     CONF_SYNC_SECONDS,
@@ -33,6 +35,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def update_device_options(device, user_input):
+    device[CONF_STATE_SUPPORT] = user_input.get(
+        CONF_STATE_SUPPORT, DEF_STATE_SUPPORT)
     device[CONF_SUPPORTS_MID] = user_input.get(
         CONF_SUPPORTS_MID, DEF_SUPPORTS_MID)
     device[CONF_SYNC_MID] = user_input.get(CONF_SYNC_MID, DEF_SYNC_MID)
@@ -74,6 +78,11 @@ def update_data_schema(data_schema, device_object, device_data):
                     #     CONF_STEPS_MID,
                     #     default=device_data.get(CONF_STEPS_MID, DEF_STEPS_MID),
                     # ): int,
+                    vol.Optional(
+                        CONF_STATE_SUPPORT,
+                        default=device_data.get(
+                            CONF_STATE_SUPPORT, DEF_STATE_SUPPORT),
+                    ): bool,
                     vol.Optional(
                         CONF_SIGNAL_REPETITIONS_DELAY_MS,
                         default=device_data.get(
@@ -120,6 +129,11 @@ def update_data_schema(data_schema, device_object, device_data):
             # Add Lovolite Vogue vertical tilt options
             data_schema.update(
                 {
+                    vol.Optional(
+                        CONF_STATE_SUPPORT,
+                        default=device_data.get(
+                            CONF_STATE_SUPPORT, DEF_STATE_SUPPORT),
+                    ): bool,
                     vol.Optional(
                         CONF_SIGNAL_REPETITIONS_DELAY_MS,
                         default=device_data.get(

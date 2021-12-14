@@ -1,3 +1,4 @@
+CONF_STATE_SUPPORT = "state_support"
 CONF_CLOSE_SECONDS = "close_seconds"
 CONF_OPEN_SECONDS = "open_seconds"
 CONF_SYNC_SECONDS = "sync_seconds"
@@ -12,6 +13,7 @@ CONF_SYNC_MID = "midpoint_sync"
 CONF_TILT_POS1_MS = "tilt1_ms"
 CONF_TILT_POS2_MS = "tilt2_ms"
 
+DEF_STATE_SUPPORT = True
 DEF_CLOSE_SECONDS = 30
 DEF_OPEN_SECONDS = 30
 DEF_SYNC_SECONDS = 2

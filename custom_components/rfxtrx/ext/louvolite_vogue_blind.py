@@ -76,7 +76,7 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
         if self._customIcon:
             if self.is_opening or self.is_closing:
                 icon = "move.png"
-                closed = False
+                closed = self._lastClosed
             else:
                 tilt = self._steps_to_tilt(self._tilt_step)
                 if tilt <= 15:
@@ -98,6 +98,7 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
                 icon = ICON_PATH + "/active/" + icon
             else:
                 icon = ICON_PATH + "/inactive/" + icon
+            self._lastClosed = closed
             _LOGGER.debug("Returned icon attribute = " + icon)
         else:
             icon = None

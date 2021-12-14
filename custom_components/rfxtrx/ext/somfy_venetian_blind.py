@@ -103,7 +103,7 @@ class SomfyVenetianBlind(AbstractTiltingCover):
         if self._customIcon:
             if self.is_opening or self.is_closing:
                 icon = "move.png"
-                closed = False
+                closed = self._lastClosed
             elif self._lift_position == BLIND_POS_CLOSED:
                 tilt = self._steps_to_tilt(self._tilt_step)
                 if tilt <= 12:
@@ -143,6 +143,7 @@ class SomfyVenetianBlind(AbstractTiltingCover):
                 icon = ICON_PATH + "/active/" + icon
             else:
                 icon = ICON_PATH + "/inactive/" + icon
+            self._lastClosed = closed
             _LOGGER.debug("Returned icon attribute = " + icon)
         else:
             icon = None

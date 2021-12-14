@@ -116,6 +116,7 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
         self._state = STATE_OPEN
         self._autoStepActive = False
         self._autoStepDirection = 0
+        self._lastClosed = False
         self._lastCommandTime = time.time()
 
         await super().async_added_to_hass()
@@ -131,10 +132,12 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
                         self._state = STATE_CLOSED
                         self._lift_position = BLIND_POS_CLOSED
                         self._tilt_step = self._tilt_to_steps(tilt)
+                        self._lastClosed = True
                     else:
                         self._state = STATE_OPEN
                         self._lift_position = BLIND_POS_OPEN
                         self._tilt_step = self._blindMidSteps
+                        self._lastClosed = False
 
                     _LOGGER.info("Recovered state=" + str(self._state) +
                                  " position=" + str(self._lift_position) +
