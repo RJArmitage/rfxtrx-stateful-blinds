@@ -1,5 +1,5 @@
 {
   "name": "RFXCOM RFXtrx + state",
-  "homeassistant": "2021.12.1",
+  "homeassistant": "2022.4.1",
   "iot_class": ["Assumed State"]
 }

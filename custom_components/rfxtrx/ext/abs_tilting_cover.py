@@ -1,4 +1,5 @@
 """Light support for switch entities."""
+from __future__ import annotations
 import logging
 import asyncio
 import time
@@ -12,18 +13,10 @@ from typing import (
 from .. import RfxtrxCommandEntity
 from homeassistant.components.cover import (
     DEVICE_CLASS_BLIND,
-    SUPPORT_CLOSE,
-    SUPPORT_OPEN,
-    SUPPORT_OPEN_TILT,
-    SUPPORT_CLOSE_TILT,
-    SUPPORT_STOP_TILT,
-    SUPPORT_STOP,
-    SUPPORT_SET_POSITION,
-    SUPPORT_SET_TILT_POSITION,
     ATTR_POSITION,
-    ATTR_TILT_POSITION,
-    CoverEntity
+    ATTR_TILT_POSITION
 )
+from homeassistant.components.cover import CoverEntity
 from homeassistant.const import (
     STATE_CLOSED,
     STATE_CLOSING,
@@ -31,7 +24,19 @@ from homeassistant.const import (
     STATE_OPENING
 )
 from homeassistant.core import callback
-from .const import ATTR_AUTO_REPEAT
+from .const import (
+    ATTR_AUTO_REPEAT,
+    ATTR_MOVEMENT_ALLOWED,
+
+    SUPPORT_OPEN,
+    SUPPORT_CLOSE,
+    SUPPORT_SET_POSITION,
+    SUPPORT_STOP,
+    SUPPORT_OPEN_TILT,
+    SUPPORT_CLOSE_TILT,
+    SUPPORT_STOP_TILT,
+    SUPPORT_SET_TILT_POSITION,
+)
 
 # Values returned for blind position in various states
 BLIND_POS_OPEN = 100
@@ -90,8 +95,9 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
         self._blindMaxSteps = int(self._blindMidSteps * 2)
         self._signalRepetitions = signal_repetitions
         self._signalRepetitionsDelay = signal_repetitions_delay / 1000
+        self._allowMovement = True
 
-        super().__init__(device, device_id, 1, event)
+        super().__init__(device, device_id, event)
 
         _LOGGER.info("New tilting cover config," +
                      " signal_repetitions=" + str(self._signalRepetitions) +
@@ -311,7 +317,7 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
         """Move the cover tilt to a specific position."""
         _LOGGER.info("Invoked async_set_cover_tilt_position")
 
-        if self._blind_is_stationary() and self._ignore_bounce():
+        if self._blind_is_stationary() and self._ignore_bounce() and self._motion_allowed():
             if ATTR_TILT_POSITION in kwargs:
                 tilt_position = kwargs[ATTR_TILT_POSITION]
             else:
@@ -336,6 +342,14 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
                     await self._async_set_cover_tilt_step(tilt)
 
     # New service operations
+
+    async def async_set_movement_allowed(self, **kwargs):
+        """Set whether or not updates are allowed"""
+        _LOGGER.info("Invoked async_set_movement_allowed")
+
+        if ATTR_MOVEMENT_ALLOWED in kwargs:
+            self._allowMovement = kwargs[ATTR_MOVEMENT_ALLOWED]
+            _LOGGER.info("Movement allowed = " + str(self._allowMovement))
 
     async def async_update_cover_position(self, **kwargs):
         """Update the internal position."""
@@ -381,7 +395,7 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
         """Move the cover to a specific position."""
         _LOGGER.info("Invoked _async_set_cover_position")
 
-        if self._blind_is_stationary():
+        if self._blind_is_stationary() and self._motion_allowed():
             if position < BLIND_POS_STOPPED:
                 if self._state != STATE_CLOSED or self._lift_position != BLIND_POS_CLOSED:
                     delay = self._blindCloseSecs
@@ -407,7 +421,7 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
         """Move the cover tilt to a specific step."""
         _LOGGER.info("Invoked _async_set_cover_tilt_step")
 
-        if self._blind_is_stationary():
+        if self._blind_is_stationary() and self._motion_allowed():
             # If the tilt step is 0 or the blind is not already clopsed then close it
             if tilt_step == 0 or self._state != STATE_CLOSED or self._lift_position != BLIND_POS_CLOSED:
                 await self._async_set_cover_position(BLIND_POS_CLOSED)
@@ -445,7 +459,7 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
         if not self._hasMidCommand:
             _LOGGER.error("Blind does not support a mid step command")
             raise Exception("tilt_blind_to_mid_step")
-        elif self._blind_is_stationary():
+        elif self._blind_is_stationary() and self._motion_allowed():
             if self._state != STATE_CLOSED or self._lift_position != BLIND_POS_CLOSED:
                 await self._set_state(STATE_OPENING, BLIND_POS_STOPPED, 0)
                 delay = self._blindCloseSecs
@@ -533,6 +547,13 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
     def _steps_to_tilt(self, steps):
         tilt = min(round(steps / self._blindMidSteps * 50), 100)
         return tilt
+
+    def _motion_allowed(self):
+        if self._allowMovement:
+            return True
+        else:
+            _LOGGER.debug("Blind motion is disabled")
+            return False
 
     async def _async_send_command(self, cmd):
         """Send a command to the blind"""

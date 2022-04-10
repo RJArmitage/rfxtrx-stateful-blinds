@@ -1,64 +1,11 @@
 send:
-  name: Send raw event
+  name: Send
   description: Sends a raw event on radio.
   fields:
     event:
       name: Event
       description: A hexadecimal string to send.
       required: true
-      example: '0b11009e00e6116202020070'
+      example: "0b11009e00e6116202020070"
       selector:
         text:
-
-update_cover_position:
-  name: Update position
-  description: Update position of a specific cover.
-  target:
-    entity:
-      domain: cover
-  fields:
-    position:
-      name: Position
-      description: Position of the cover
-      required: true
-      selector:
-        number:
-          min: 0
-          max: 100
-          unit_of_measurement: '%'
-    tilt_position:
-      name: Tilt position
-      description: Tilt position of the cover
-      required: true
-      selector:
-        number:
-          min: 0
-          max: 100
-          unit_of_measurement: '%'
-
-increase_cover_tilt:
-  name: Increase cover tilt
-  description: Increase tilt position of a specific cover.
-  target:
-    entity:
-      domain: cover
-  fields:
-    repeat_automatically:
-      name: Repeat automatically
-      description: Repeat tilt operation until cancelled
-      required: false
-      selector:
-        boolean:
-
-decrease_cover_tilt:
-  name: Decrease cover tilt
-  description: Decrease tilt position of a specific cover.
-  target:
-    entity:
-      domain: cover
-  fields:
-    repeat_automatically:
-      description: Repeat tilt operation until cancelled
-      required: false
-      selector:
-        boolean:

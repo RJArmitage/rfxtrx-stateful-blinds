@@ -1,14 +1,9 @@
+from __future__ import annotations
 import logging
 import asyncio
 from homeassistant.const import (
     STATE_OPENING,
     STATE_CLOSING
-)
-from homeassistant.components.rfxtrx.const import (
-    CONF_VENETIAN_BLIND_MODE,
-    CONST_VENETIAN_BLIND_MODE_EU,
-    CONST_VENETIAN_BLIND_MODE_US,
-    CONF_SIGNAL_REPETITIONS
 )
 from .abs_tilting_cover import (
     AbstractTiltingCover,
@@ -25,6 +20,8 @@ from .const import (
     CONF_TILT_POS2_MS,
     CONF_CUSTOM_ICON,
     CONF_COLOUR_ICON,
+    CONF_PARTIAL_CLOSED,
+    CONF_SIGNAL_REPETITIONS,
     CONF_SIGNAL_REPETITIONS_DELAY_MS,
     DEF_CLOSE_SECONDS,
     DEF_OPEN_SECONDS,
@@ -34,7 +31,13 @@ from .const import (
     DEF_TILT_POS2_MS,
     DEF_CUSTOM_ICON,
     DEF_COLOUR_ICON,
-    DEF_SIGNAL_REPETITIONS_DELAY_MS
+    DEF_PARTIAL_CLOSED,
+    DEF_SIGNAL_REPETITIONS_DELAY_MS,
+
+    CONF_VENETIAN_BLIND_MODE,
+    CONST_VENETIAN_BLIND_MODE_DEFAULT,
+    CONST_VENETIAN_BLIND_MODE_EU,
+    CONST_VENETIAN_BLIND_MODE_US,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -96,48 +99,50 @@ class SomfyVenetianBlind(AbstractTiltingCover):
 
         self._customIcon = entity_info.get(CONF_CUSTOM_ICON, DEF_CUSTOM_ICON)
         self._colourIcon = entity_info.get(CONF_COLOUR_ICON, DEF_COLOUR_ICON)
+        self._partialClosed = entity_info.get(
+            CONF_PARTIAL_CLOSED, DEF_PARTIAL_CLOSED)
 
     @property
     def entity_picture(self):
         """Return the icon property."""
         if self._customIcon:
             if self.is_opening or self.is_closing:
-                icon = "move.png"
+                icon = "move.svg"
                 closed = self._lastClosed
             elif self._lift_position == BLIND_POS_CLOSED:
                 tilt = self._steps_to_tilt(self._tilt_step)
                 if tilt <= 12:
-                    icon = "10.png"
+                    icon = "10.svg"
                     closed = True
                 elif tilt <= 25:
-                    icon = "20.png"
-                    closed = True
+                    icon = "20.svg"
+                    closed = self._partialClosed
                 elif tilt <= 35:
-                    icon = "30.png"
+                    icon = "30.svg"
                     closed = False
                 elif tilt <= 45:
-                    icon = "40.png"
+                    icon = "40.svg"
                     closed = False
                 elif tilt <= 55:
-                    icon = "50.png"
+                    icon = "50.svg"
                     closed = False
                 elif tilt <= 65:
-                    icon = "60.png"
+                    icon = "60.svg"
                     closed = False
                 elif tilt <= 75:
-                    icon = "70.png"
-                    closed = True
+                    icon = "70.svg"
+                    closed = self._partialClosed
                 elif tilt <= 85:
-                    icon = "80.png"
-                    closed = True
+                    icon = "80.svg"
+                    closed = self._partialClosed
                 else:
-                    icon = "90.png"
+                    icon = "90.svg"
                     closed = True
             elif self._lift_position == BLIND_POS_OPEN:
-                icon = "up.png"
+                icon = "up.svg"
                 closed = False
             else:
-                icon = "down.png"
+                icon = "down.svg"
                 closed = True
             if self._colourIcon and not(closed):
                 icon = ICON_PATH + "/active/" + icon
@@ -156,69 +161,76 @@ class SomfyVenetianBlind(AbstractTiltingCover):
     async def _async_tilt_blind_to_step(self, steps, target):
         """Callback to tilt the blind to some position"""
         _LOGGER.info("SOMFY VENETIAN TILTING BLIND")
-        if target == 0:
-            await self._async_set_cover_position(BLIND_POS_CLOSED)
 
-        elif target == 1:
-            # If not already at mid point then move first
-            if steps != -1:
+        if self._motion_allowed():
+            if target == 0:
+                await self._async_set_cover_position(BLIND_POS_CLOSED)
+
+            elif target == 1:
+                # If not already at mid point then move first
+                if steps != -1:
+                    await self._async_tilt_blind_to_mid_step()
+
+                await self._async_somfy_blind_down()
+                await asyncio.sleep(self._tiltPos1Sec)
+                await self._async_send_command(CMD_SOMFY_STOP)
+
+            elif target == 2:
                 await self._async_tilt_blind_to_mid_step()
 
-            await self._async_somfy_blind_down()
-            await asyncio.sleep(self._tiltPos1Sec)
-            await self._async_send_command(CMD_SOMFY_STOP)
+            elif target == 3:
+                # If not already at mid point then move first
+                if steps != 1:
+                    await self._async_tilt_blind_to_mid_step()
 
-        elif target == 2:
-            await self._async_tilt_blind_to_mid_step()
+                await self._async_somfy_blind_up()
+                await asyncio.sleep(self._tiltPos2Sec)
+                await self._async_send_command(CMD_SOMFY_STOP)
 
-        elif target == 3:
-            # If not already at mid point then move first
-            if steps != 1:
-                await self._async_tilt_blind_to_mid_step()
-
-            await self._async_somfy_blind_up()
-            await asyncio.sleep(self._tiltPos2Sec)
-            await self._async_send_command(CMD_SOMFY_STOP)
-
-        elif target == 4:
-            await self._async_set_cover_position(BLIND_POS_CLOSED)
+            elif target == 4:
+                await self._async_set_cover_position(BLIND_POS_CLOSED)
 
         return target
 
     async def _async_do_close_blind(self):
         """Callback to close a Somfy blind"""
         _LOGGER.info("SOMFY VENETIAN CLOSING BLIND")
-        await self._set_state(STATE_CLOSING, BLIND_POS_CLOSED, self._tilt_step)
-        await self._async_somfy_blind_down()
+        if self._motion_allowed():
+            await self._set_state(STATE_CLOSING, BLIND_POS_CLOSED, self._tilt_step)
+            await self._async_somfy_blind_down()
 
     async def _async_do_open_blind(self):
         """Callback to open a Somfy blind"""
         _LOGGER.info("SOMFY VENETIAN OPENING BLIND")
-        await self._async_somfy_blind_up()
+        if self._motion_allowed():
+            await self._async_somfy_blind_up()
 
     async def _async_do_tilt_blind_to_mid(self):
         """Callback to tilt a Somfy blind to mid"""
         _LOGGER.info("SOMFY VENETIAN TILTING BLIND TO MID")
-        await self._set_state(STATE_OPENING, BLIND_POS_CLOSED, self._tilt_step)
-        await self._async_send_command(CMD_SOMFY_STOP)
+        if self._motion_allowed():
+            await self._set_state(STATE_OPENING, BLIND_POS_CLOSED, self._tilt_step)
+            await self._async_send_command(CMD_SOMFY_STOP)
         return self._blindSyncSecs
 
     async def _async_somfy_blind_down(self):
         """Callback to move a Somfy venetian blind down - varies between regions"""
-        if self._venetian_blind_mode == CONST_VENETIAN_BLIND_MODE_US:
-            await self._async_send_command(CMD_SOMFY_DOWN05SEC)
-        elif self._venetian_blind_mode == CONST_VENETIAN_BLIND_MODE_EU:
-            await self._async_send_command(CMD_SOMFY_DOWN2SEC)
-        else:
-            _LOGGER.warn("Unexpected DOWN command for a none-EU/US device")
-            await self._async_send_command(CMD_SOMFY_DOWN)
+        if self._motion_allowed():
+            if self._venetian_blind_mode == CONST_VENETIAN_BLIND_MODE_US:
+                await self._async_send_command(CMD_SOMFY_DOWN05SEC)
+            elif self._venetian_blind_mode == CONST_VENETIAN_BLIND_MODE_EU:
+                await self._async_send_command(CMD_SOMFY_DOWN2SEC)
+            else:
+                _LOGGER.warn("Unexpected DOWN command for a none-EU/US device")
+                await self._async_send_command(CMD_SOMFY_DOWN)
 
     async def _async_somfy_blind_up(self):
         """Callback to move a Somfy venetian blind up - varies between regions"""
-        if self._venetian_blind_mode == CONST_VENETIAN_BLIND_MODE_US:
-            await self._async_send_command(CMD_SOMFY_UP05SEC)
-        elif self._venetian_blind_mode == CONST_VENETIAN_BLIND_MODE_EU:
-            await self._async_send_command(CMD_SOMFY_UP2SEC)
-        else:
-            _LOGGER.warn("Unexpected UP command for a none-EU/US device")
-            await self._async_send_command(CMD_SOMFY_UP)
+        if self._motion_allowed():
+            if self._venetian_blind_mode == CONST_VENETIAN_BLIND_MODE_US:
+                await self._async_send_command(CMD_SOMFY_UP05SEC)
+            elif self._venetian_blind_mode == CONST_VENETIAN_BLIND_MODE_EU:
+                await self._async_send_command(CMD_SOMFY_UP2SEC)
+            else:
+                _LOGGER.warn("Unexpected UP command for a none-EU/US device")
+                await self._async_send_command(CMD_SOMFY_UP)

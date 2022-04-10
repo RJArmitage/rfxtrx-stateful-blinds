@@ -1,4 +1,5 @@
 """Light support for switch entities."""
+from __future__ import annotations
 import logging
 import asyncio
 import time
@@ -12,24 +13,16 @@ from typing import (
 from .. import RfxtrxCommandEntity
 from homeassistant.components.cover import (
     DEVICE_CLASS_BLIND,
-    SUPPORT_CLOSE,
-    SUPPORT_OPEN,
-    SUPPORT_STOP,
-    SUPPORT_SET_POSITION,
-    ATTR_POSITION,
-    CoverEntity
+    ATTR_POSITION
 )
+from homeassistant.components.cover import CoverEntity
 from homeassistant.const import (
     STATE_CLOSED,
     STATE_CLOSING,
     STATE_OPEN,
     STATE_OPENING
 )
-from homeassistant.components.rfxtrx.const import (
-    CONF_SIGNAL_REPETITIONS
-)
 from homeassistant.core import callback
-from .const import ATTR_AUTO_REPEAT
 
 from .const import (
     CONF_CLOSE_SECONDS,
@@ -37,13 +30,22 @@ from .const import (
     CONF_SYNC_SECONDS,
     CONF_CUSTOM_ICON,
     CONF_COLOUR_ICON,
+    CONF_PARTIAL_CLOSED,
+    CONF_SIGNAL_REPETITIONS,
     CONF_SIGNAL_REPETITIONS_DELAY_MS,
     DEF_CLOSE_SECONDS,
     DEF_OPEN_SECONDS,
     DEF_SYNC_SECONDS,
     DEF_CUSTOM_ICON,
     DEF_COLOUR_ICON,
-    DEF_SIGNAL_REPETITIONS_DELAY_MS
+    DEF_PARTIAL_CLOSED,
+    DEF_SIGNAL_REPETITIONS_DELAY_MS,
+    SUPPORT_OPEN,
+    SUPPORT_CLOSE,
+    SUPPORT_SET_POSITION,
+    SUPPORT_STOP,
+    ATTR_MOVEMENT_ALLOWED
+
 )
 
 ICON_PATH = "/local/rfxtrx/roller"
@@ -101,8 +103,11 @@ class SomfyRollerBlind(RfxtrxCommandEntity, CoverEntity):
             CONF_SIGNAL_REPETITIONS_DELAY_MS, DEF_SIGNAL_REPETITIONS_DELAY_MS) / 1000
         self._customIcon = entity_info.get(CONF_CUSTOM_ICON, DEF_CUSTOM_ICON)
         self._colourIcon = entity_info.get(CONF_COLOUR_ICON, DEF_COLOUR_ICON)
+        self._partialClosed = entity_info.get(
+            CONF_PARTIAL_CLOSED, DEF_PARTIAL_CLOSED)
+        self._allowMovement = True
 
-        super().__init__(device, device_id, 1, event)
+        super().__init__(device, device_id, event)
 
         _LOGGER.info("New somfy roller cover config," +
                      " signal_repetitions=" + str(self._signalRepetitions) +
@@ -212,19 +217,19 @@ class SomfyRollerBlind(RfxtrxCommandEntity, CoverEntity):
         """Return the icon property."""
         if self._customIcon:
             if self.is_opening or self.is_closing:
-                icon = "move.png"
+                icon = "move.svg"
                 closed = self._lastClosed
             else:
                 pos = self._lift_position
                 if pos <= BLIND_POS_CLOSED:
-                    icon = "00.png"
+                    icon = "00.svg"
                     closed = True
                 elif pos >= BLIND_POS_OPEN:
-                    icon = "99.png"
+                    icon = "99.svg"
                     closed = False
                 else:
-                    icon = "50.png"
-                    closed = False
+                    icon = "50.svg"
+                    closed = self._partialClosed
             if self._colourIcon and not(closed):
                 icon = ICON_PATH + "/active/" + icon
             else:
@@ -326,6 +331,14 @@ class SomfyRollerBlind(RfxtrxCommandEntity, CoverEntity):
 
     # Helper functions
 
+    async def async_set_movement_allowed(self, **kwargs):
+        """Set whether or not updates are allowed"""
+        _LOGGER.info("Invoked async_set_movement_allowed")
+
+        if ATTR_MOVEMENT_ALLOWED in kwargs:
+            self._allowMovement = kwargs[ATTR_MOVEMENT_ALLOWED]
+            _LOGGER.info("Movement allowed = " + str(self._allowMovement))
+
     async def _set_state(self, newState, newLift):
         self._state = newState
         self._lift_position = newLift
@@ -359,6 +372,13 @@ class SomfyRollerBlind(RfxtrxCommandEntity, CoverEntity):
             return False
         else:
             return True
+
+    def _motion_allowed(self):
+        if self._allowMovement:
+            return True
+        else:
+            _LOGGER.debug("Blind motion is disabled")
+            return False
 
     async def _async_send_command(self, cmd):
         """Send a command to the blind"""

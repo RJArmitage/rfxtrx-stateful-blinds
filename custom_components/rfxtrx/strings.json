@@ -41,9 +41,9 @@
         "data": {
           "debug": "Enable debugging",
           "automatic_add": "Enable automatic add",
+          "protocols": "Protocols",
           "event_code": "Enter event code to add",
-          "device": "Select device to configure",
-          "remove_device": "Select device to delete"
+          "device": "Select device to configure"
         },
         "title": "Rfxtrx Options"
       },
@@ -54,7 +54,6 @@
           "data_bit": "Number of data bits",
           "command_on": "Data bits value for command on",
           "command_off": "Data bits value for command off",
-          "signal_repetitions": "Number of signal repetitions",
           "venetian_blind_mode": "Venetian blind mode",
           "replace_device": "Select device to replace",
 
@@ -69,6 +68,8 @@
           "tilt2_ms": "Tilting Blind - Upper tilt time from midpoint (ms)",
           "custom_icon": "Custom cover icon",
           "colour_icon": "Highlight open cover",
+          "partial_closed": "Highlight partially open as closed",
+          "signal_repetitions": "Number of signal repetitions",
           "signal_repetition_delay": "Delay between signal repetitions (ms)"
         },
         "title": "Configure device options"

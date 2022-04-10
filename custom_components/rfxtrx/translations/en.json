@@ -61,6 +61,7 @@
           "debug": "Enable debugging",
           "device": "Select device to configure",
           "event_code": "Enter event code to add",
+          "protocols": "Protocols",
           "remove_device": "Select device to delete"
         },
         "title": "Rfxtrx Options"
@@ -70,10 +71,10 @@
           "command_off": "Data bits value for command off",
           "command_on": "Data bits value for command on",
           "data_bit": "Number of data bits",
+          "fire_event": "Enable device event",
           "off_delay": "Off delay",
           "off_delay_enabled": "Enable off delay",
           "replace_device": "Select device to replace",
-          "signal_repetitions": "Number of signal repetitions",
           "venetian_blind_mode": "Venetian blind mode",
 
           "state_support": "Provide stateful support",
@@ -87,6 +88,8 @@
           "tilt2_ms": "Tilting Blind - Upper tilt time from midpoint (ms)",
           "custom_icon": "Custom cover icon",
           "colour_icon": "Highlight open cover",
+          "partial_closed": "Highlight partially open as closed",
+          "signal_repetitions": "Number of signal repetitions",
           "signal_repetition_delay": "Delay between signal repetitions (ms)"
         },
         "title": "Configure device options"
