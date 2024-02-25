@@ -1,8 +1,10 @@
 from __future__ import annotations
 import voluptuous as vol
 import logging
-# from homeassistant.components.rfxtrx.cover import supported as cover_supported
+
 from .const import (
+    CONF_ROLLER_MID_ON_CLOSE,
+    DEF_ROLLER_MID_ON_CLOSE,
     DEF_STATE_SUPPORT,
     DEF_CLOSE_SECONDS,
     DEF_OPEN_SECONDS,
@@ -39,53 +41,29 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-def update_device_options(device, user_input):
-    device[CONF_STATE_SUPPORT] = user_input.get(
-        CONF_STATE_SUPPORT, DEF_STATE_SUPPORT)
-    device[CONF_SUPPORTS_MID] = user_input.get(
-        CONF_SUPPORTS_MID, DEF_SUPPORTS_MID)
+def update_device_options(device, user_input) -> None:
+    device[CONF_STATE_SUPPORT] = user_input.get(CONF_STATE_SUPPORT, DEF_STATE_SUPPORT)
+    device[CONF_SUPPORTS_MID] = user_input.get(CONF_SUPPORTS_MID, DEF_SUPPORTS_MID)
     device[CONF_SYNC_MID] = user_input.get(CONF_SYNC_MID, DEF_SYNC_MID)
     device[CONF_STEPS_MID] = user_input.get(CONF_STEPS_MID, DEF_STEPS_MID)
-    device[CONF_OPEN_SECONDS] = user_input.get(
-        CONF_OPEN_SECONDS, DEF_OPEN_SECONDS)
-    device[CONF_CLOSE_SECONDS] = user_input.get(
-        CONF_CLOSE_SECONDS, DEF_CLOSE_SECONDS)
-    device[CONF_SYNC_SECONDS] = user_input.get(
-        CONF_SYNC_SECONDS, DEF_SYNC_SECONDS)
-    device[CONF_TILT_POS1_MS] = user_input.get(
-        CONF_TILT_POS1_MS, DEF_TILT_POS1_MS)
-    device[CONF_TILT_POS2_MS] = user_input.get(
-        CONF_TILT_POS2_MS, DEF_TILT_POS2_MS)
-    device[CONF_CUSTOM_ICON] = user_input.get(
-        CONF_CUSTOM_ICON, DEF_CUSTOM_ICON)
-    device[CONF_COLOUR_ICON] = user_input.get(
-        CONF_COLOUR_ICON, DEF_COLOUR_ICON)
-    device[CONF_PARTIAL_CLOSED] = user_input.get(
-        CONF_PARTIAL_CLOSED, DEF_PARTIAL_CLOSED)
-    device[CONF_SIGNAL_REPETITIONS] = user_input.get(
-        CONF_SIGNAL_REPETITIONS, DEF_SIGNAL_REPETITIONS)
-    device[CONF_SIGNAL_REPETITIONS_DELAY_MS] = user_input.get(
-        CONF_SIGNAL_REPETITIONS_DELAY_MS, DEF_SIGNAL_REPETITIONS_DELAY_MS)
+    device[CONF_OPEN_SECONDS] = user_input.get(CONF_OPEN_SECONDS, DEF_OPEN_SECONDS)
+    device[CONF_CLOSE_SECONDS] = user_input.get(CONF_CLOSE_SECONDS, DEF_CLOSE_SECONDS)
+    device[CONF_SYNC_SECONDS] = user_input.get(CONF_SYNC_SECONDS, DEF_SYNC_SECONDS)
+    device[CONF_TILT_POS1_MS] = user_input.get(CONF_TILT_POS1_MS, DEF_TILT_POS1_MS)
+    device[CONF_TILT_POS2_MS] = user_input.get(CONF_TILT_POS2_MS, DEF_TILT_POS2_MS)
+    device[CONF_CUSTOM_ICON] = user_input.get(CONF_CUSTOM_ICON, DEF_CUSTOM_ICON)
+    device[CONF_COLOUR_ICON] = user_input.get(CONF_COLOUR_ICON, DEF_COLOUR_ICON)
+    device[CONF_PARTIAL_CLOSED] = user_input.get(CONF_PARTIAL_CLOSED, DEF_PARTIAL_CLOSED)
+    device[CONF_SIGNAL_REPETITIONS] = user_input.get(CONF_SIGNAL_REPETITIONS, DEF_SIGNAL_REPETITIONS)
+    device[CONF_SIGNAL_REPETITIONS_DELAY_MS] = user_input.get(CONF_SIGNAL_REPETITIONS_DELAY_MS, DEF_SIGNAL_REPETITIONS_DELAY_MS)
+    device[CONF_ROLLER_MID_ON_CLOSE] = user_input.get(CONF_ROLLER_MID_ON_CLOSE, DEF_ROLLER_MID_ON_CLOSE)
 
 
-def update_data_schema(data_schema, device_object, device_data):
+def update_data_schema(data_schema, device_object, device_data) -> None:
     if device_object.device.packettype == DEVICE_PACKET_TYPE_RFY:
         # Add Somfy RFY venetian tilt options
         data_schema.update(
             {
-                # vol.Optional(
-                #     CONF_SUPPORTS_MID,
-                #     default=device_data.get(
-                #         CONF_SUPPORTS_MID, DEF_SUPPORTS_MID)
-                # ): bool,
-                # vol.Optional(
-                #     CONF_SYNC_MID,
-                #     default=device_data.get(CONF_SYNC_MID, DEF_SYNC_MID),
-                # ): bool,
-                # vol.Optional(
-                #     CONF_STEPS_MID,
-                #     default=device_data.get(CONF_STEPS_MID, DEF_STEPS_MID),
-                # ): int,
                 vol.Optional(
                     CONF_STATE_SUPPORT,
                     default=device_data.get(
@@ -140,6 +118,11 @@ def update_data_schema(data_schema, device_object, device_data):
                     CONF_PARTIAL_CLOSED,
                     default=device_data.get(
                         CONF_PARTIAL_CLOSED, DEF_PARTIAL_CLOSED),
+                ): bool,
+                vol.Optional(
+                    CONF_ROLLER_MID_ON_CLOSE,
+                    default=device_data.get(
+                        CONF_ROLLER_MID_ON_CLOSE, DEF_ROLLER_MID_ON_CLOSE),
                 ): bool
             }
         )

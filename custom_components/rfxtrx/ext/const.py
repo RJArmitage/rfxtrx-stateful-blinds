@@ -7,6 +7,7 @@ CONF_COLOUR_ICON = "colour_icon"
 CONF_PARTIAL_CLOSED = "partial_closed"
 CONF_SIGNAL_REPETITIONS_DELAY_MS = "signal_repetition_delay"
 CONF_SIGNAL_REPETITIONS = "signal_repetitions"
+CONF_ROLLER_MID_ON_CLOSE = "roller_mid_on_close"
 
 CONF_SUPPORTS_MID = "midpoint_supported"
 CONF_STEPS_MID = "midpoint_steps"
@@ -27,6 +28,7 @@ DEF_COLOUR_ICON = True
 DEF_PARTIAL_CLOSED = True
 DEF_SIGNAL_REPETITIONS_DELAY_MS = 250
 DEF_SIGNAL_REPETITIONS = 1
+DEF_ROLLER_MID_ON_CLOSE = True
 
 DEF_TILT_POS1_MS = 1750
 DEF_TILT_POS2_MS = 1750

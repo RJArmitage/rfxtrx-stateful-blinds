@@ -1,8 +1,6 @@
 """Provides device automations for RFXCOM RFXtrx."""
 from __future__ import annotations
 
-from collections.abc import Callable
-
 import voluptuous as vol
 
 from homeassistant.components.device_automation.exceptions import (
@@ -11,7 +9,6 @@ from homeassistant.components.device_automation.exceptions import (
 from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_TYPE
 from homeassistant.core import Context, HomeAssistant
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType
 
 from . import DATA_RFXOBJECT, DOMAIN
 from .helpers import async_get_device_object
@@ -40,9 +37,7 @@ ACTION_SCHEMA = cv.DEVICE_ACTION_BASE_SCHEMA.extend(
 )
 
 
-async def async_get_actions(
-    hass: HomeAssistant, device_id: str
-) -> list[dict[str, str]]:
+async def async_get_actions(hass: HomeAssistant, device_id: str) -> list[dict]:
     """List device actions for RFXCOM RFXtrx devices."""
 
     try:
@@ -53,8 +48,8 @@ async def async_get_actions(
     actions = []
     for action_type in ACTION_TYPES:
         if hasattr(device, action_type):
-            data: dict[int, str] = getattr(device, ACTION_SELECTION[action_type], {})
-            for value in data.values():
+            values = getattr(device, ACTION_SELECTION[action_type], {})
+            for value in values.values():
                 actions.append(
                     {
                         CONF_DEVICE_ID: device_id,
@@ -67,18 +62,14 @@ async def async_get_actions(
     return actions
 
 
-def _get_commands(
-    hass: HomeAssistant, device_id: str, action_type: str
-) -> tuple[dict[str, str], Callable[..., None]]:
+def _get_commands(hass, device_id, action_type):
     device = async_get_device_object(hass, device_id)
     send_fun = getattr(device, action_type)
     commands = getattr(device, ACTION_SELECTION[action_type], {})
     return commands, send_fun
 
 
-async def async_validate_action_config(
-    hass: HomeAssistant, config: ConfigType
-) -> ConfigType:
+async def async_validate_action_config(hass, config):
     """Validate config."""
     config = ACTION_SCHEMA(config)
     commands, _ = _get_commands(hass, config[CONF_DEVICE_ID], config[CONF_TYPE])
@@ -93,10 +84,7 @@ async def async_validate_action_config(
 
 
 async def async_call_action_from_config(
-    hass: HomeAssistant,
-    config: ConfigType,
-    variables: TemplateVarsType,
-    context: Context | None,
+    hass: HomeAssistant, config: dict, variables: dict, context: Context | None
 ) -> None:
     """Execute a device action."""
     config = ACTION_SCHEMA(config)

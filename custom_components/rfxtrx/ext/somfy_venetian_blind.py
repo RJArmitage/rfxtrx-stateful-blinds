@@ -1,58 +1,26 @@
+"""Support for RFXtrx covers."""
 from __future__ import annotations
+
 import logging
+from typing import Any
 import asyncio
-from homeassistant.const import (
-    STATE_OPENING,
-    STATE_CLOSING
-)
+
+import RFXtrx as rfxtrxmod
+
+from .. import DeviceTuple
+
 from .abs_tilting_cover import (
     AbstractTiltingCover,
-    BLIND_POS_OPEN,
-    BLIND_POS_CLOSED
-)
-from .const import (
-    CONF_CLOSE_SECONDS,
-    CONF_OPEN_SECONDS,
-    CONF_STEPS_MID,
-    CONF_SYNC_SECONDS,
-    CONF_SYNC_MID,
-    CONF_TILT_POS1_MS,
-    CONF_TILT_POS2_MS,
-    CONF_CUSTOM_ICON,
-    CONF_COLOUR_ICON,
-    CONF_PARTIAL_CLOSED,
-    CONF_SIGNAL_REPETITIONS,
-    CONF_SIGNAL_REPETITIONS_DELAY_MS,
-    DEF_CLOSE_SECONDS,
-    DEF_OPEN_SECONDS,
-    DEF_STEPS_MID,
-    DEF_SYNC_SECONDS,
-    DEF_TILT_POS1_MS,
-    DEF_TILT_POS2_MS,
-    DEF_CUSTOM_ICON,
-    DEF_COLOUR_ICON,
-    DEF_PARTIAL_CLOSED,
-    DEF_SIGNAL_REPETITIONS_DELAY_MS,
-
-    CONF_VENETIAN_BLIND_MODE,
-    CONST_VENETIAN_BLIND_MODE_DEFAULT,
-    CONST_VENETIAN_BLIND_MODE_EU,
-    CONST_VENETIAN_BLIND_MODE_US,
+    TILT_MAX_STEP,
+    TILT_MID_STEP,
+    TILT_MIN_STEP
 )
 
 _LOGGER = logging.getLogger(__name__)
 
-DEVICE_TYPE = "Somfy Venetian"
-
-CMD_SOMFY_STOP = 0x00
-CMD_SOMFY_UP = 0x01
-CMD_SOMFY_DOWN = 0x03
-CMD_SOMFY_UP05SEC = 0x0f
-CMD_SOMFY_DOWN05SEC = 0x10
-CMD_SOMFY_UP2SEC = 0x11
-CMD_SOMFY_DOWN2SEC = 0x12
-
 ICON_PATH = "/local/rfxtrx/venetian"
+
+DEVICE_TYPE = "Somfy Venetian"
 
 # Event 071a000001010101 Office
 # Event 071a000001020101 Front
@@ -63,174 +31,125 @@ ICON_PATH = "/local/rfxtrx/venetian"
 # Event 071a000001060401 Living 4
 # Event 071a000001060501 Living 5
 # Event 071a00000106ff01 Living all
-# Event 071a000002010101 Kitchen
 
 
 class SomfyVenetianBlind(AbstractTiltingCover):
-    """Representation of a RFXtrx cover."""
+    """Representation of a SomfyVenetianBlind RFXtrx cover."""
 
-    def __init__(self, device, device_id, entity_info, event=None):
+    def __init__(
+        self,
+        device: rfxtrxmod.RFXtrxDevice,
+        device_id: DeviceTuple,
+        entity_info: dict[str, Any],
+        event: rfxtrxmod.RFXtrxEvent = None,
+    ) -> None:
+        """Initialize the SomfyVenetianBlind RFXtrx cover device."""
+
         device.type_string = DEVICE_TYPE
-        super().__init__(device, device_id,
-                         entity_info[CONF_SIGNAL_REPETITIONS],
-                         entity_info.get(
-                             CONF_SIGNAL_REPETITIONS_DELAY_MS, DEF_SIGNAL_REPETITIONS_DELAY_MS),
-                         event,
-                         # entity_info.get(CONF_STEPS_MID, DEF_STEPS_MID),  # steps to mid point
-                         2,  # Currently support 2 steps to mid point
-                         True,  # Supports mid point
-                         True,  # Supports lift
-                         False,  # Do not lift on open
-                         False,  # Sync on mid point
-                         entity_info.get(CONF_OPEN_SECONDS,
-                                         DEF_OPEN_SECONDS),  # Open time
-                         entity_info.get(CONF_CLOSE_SECONDS,
-                                         DEF_CLOSE_SECONDS),  # Close time
-                         entity_info.get(CONF_SYNC_SECONDS,
-                                         DEF_SYNC_SECONDS),  # Sync time ms
-                         500  # Ms for each step
-                         )
+        
+        super().__init__(
+            device=device,
+            device_id=device_id,
+            entity_info=entity_info,
+            event=event
+        )
 
-        self._venetian_blind_mode = entity_info.get(CONF_VENETIAN_BLIND_MODE)
-        self._tiltPos1Sec = entity_info.get(
-            CONF_TILT_POS1_MS, DEF_TILT_POS1_MS) / 1000
-        self._tiltPos2Sec = entity_info.get(
-            CONF_TILT_POS2_MS, DEF_TILT_POS2_MS) / 1000
-
-        self._customIcon = entity_info.get(CONF_CUSTOM_ICON, DEF_CUSTOM_ICON)
-        self._colourIcon = entity_info.get(CONF_COLOUR_ICON, DEF_COLOUR_ICON)
-        self._partialClosed = entity_info.get(
-            CONF_PARTIAL_CLOSED, DEF_PARTIAL_CLOSED)
 
     @property
-    def entity_picture(self):
+    def _entity_picture(self) -> str | None:
         """Return the icon property."""
-        if self._customIcon:
-            if self.is_opening or self.is_closing:
-                icon = "move.svg"
-                closed = self._lastClosed
-            elif self._lift_position == BLIND_POS_CLOSED:
-                tilt = self._steps_to_tilt(self._tilt_step)
-                if tilt <= 12:
-                    icon = "10.svg"
-                    closed = True
-                elif tilt <= 25:
-                    icon = "20.svg"
-                    closed = self._partialClosed
-                elif tilt <= 35:
-                    icon = "30.svg"
-                    closed = False
-                elif tilt <= 45:
-                    icon = "40.svg"
-                    closed = False
-                elif tilt <= 55:
-                    icon = "50.svg"
-                    closed = False
-                elif tilt <= 65:
-                    icon = "60.svg"
-                    closed = False
-                elif tilt <= 75:
-                    icon = "70.svg"
-                    closed = self._partialClosed
-                elif tilt <= 85:
-                    icon = "80.svg"
-                    closed = self._partialClosed
-                else:
-                    icon = "90.svg"
-                    closed = True
-            elif self._lift_position == BLIND_POS_OPEN:
-                icon = "up.svg"
-                closed = False
-            else:
-                icon = "down.svg"
-                closed = True
-            if self._colourIcon and not(closed):
-                icon = ICON_PATH + "/active/" + icon
-            else:
-                icon = ICON_PATH + "/inactive/" + icon
-            self._lastClosed = closed
-            _LOGGER.debug("Returned icon attribute = " + icon)
+        if self._is_moving:
+            icon = "move.svg"
+            closed = False
+        elif self._myattr_is_raised:
+            icon = "up.svg"
+            closed = False
+        elif self._myattr_tilt_step == TILT_MIN_STEP:
+            icon = "10.svg"
+            closed = True
+        elif self._myattr_tilt_step == 1:
+            icon = "20.svg"
+            closed = self._myattr_partial_is_closed
+        elif self._myattr_tilt_step == TILT_MID_STEP:
+            icon = "50.svg"
+            closed = False
+        elif self._myattr_tilt_step == 3:
+            icon = "80.svg"
+            closed = self._myattr_partial_is_closed
+        elif self._myattr_tilt_step == TILT_MAX_STEP:
+            icon = "90.svg"
+            closed = True
         else:
-            icon = None
+            icon = "mid.svg"
+            closed = False
+
+        if self._myattr_colour_open and not(closed):
+            icon = ICON_PATH + "/active/" + icon
+        else:
+            icon = ICON_PATH + "/inactive/" + icon
+
         return icon
 
-    # Handle tilting a somfy blind. At present this is done by simulating a tilt using
-    # an open or close followed by a delay. This needs to be replaced by a number of
-    # tilt operations when supported by RFXCOM
 
-    async def _async_tilt_blind_to_step(self, steps, target):
-        """Callback to tilt the blind to some position"""
-        _LOGGER.info("SOMFY VENETIAN TILTING BLIND")
+    async def _async_raise_blind(self) -> None:
+        """Lift the cover."""
+        _LOGGER.info("Invoked _async_raise_blind")
 
-        if self._motion_allowed():
-            if target == 0:
-                await self._async_set_cover_position(BLIND_POS_CLOSED)
 
-            elif target == 1:
-                # If not already at mid point then move first
-                if steps != -1:
-                    await self._async_tilt_blind_to_mid_step()
+    async def _async_lower_blind(self) -> None:
+        """Lower the cover."""
+        _LOGGER.info("Invoked _async_lower_blind")
 
-                await self._async_somfy_blind_down()
-                await asyncio.sleep(self._tiltPos1Sec)
-                await self._async_send_command(CMD_SOMFY_STOP)
+        sync_time = self._myattr_sync_secs if not(self._myattr_is_raised) else self._myattr_close_secs
+        await self._async_send_repeat(self._device.send_down05sec)
+        await self._async_wait_and_set_position(sync_time, False, 0)
 
-            elif target == 2:
-                await self._async_tilt_blind_to_mid_step()
 
-            elif target == 3:
-                # If not already at mid point then move first
-                if steps != 1:
-                    await self._async_tilt_blind_to_mid_step()
+    async def _async_stop_blind(self) -> None:
+        """Stop the cover."""
+        _LOGGER.info("Invoked _async_stop_blind")
+        await self._async_send(self._device.send_stop)
 
-                await self._async_somfy_blind_up()
-                await asyncio.sleep(self._tiltPos2Sec)
-                await self._async_send_command(CMD_SOMFY_STOP)
 
-            elif target == 4:
-                await self._async_set_cover_position(BLIND_POS_CLOSED)
+    async def _async_tilt_blind_to_step(self, tilt_step) -> None:
+        """Move the cover tilt to a preset position."""
+        _LOGGER.info("Invoked _async_tilt_blind_to_mid_step; tilt_step = " + str(tilt_step))
 
-        return target
+        # Somfy cannot tilt fully up so instead switch to full down
+        if tilt_step >= TILT_MAX_STEP:
+            tilt_step = TILT_MIN_STEP
 
-    async def _async_do_close_blind(self):
-        """Callback to close a Somfy blind"""
-        _LOGGER.info("SOMFY VENETIAN CLOSING BLIND")
-        if self._motion_allowed():
-            await self._set_state(STATE_CLOSING, BLIND_POS_CLOSED, self._tilt_step)
-            await self._async_somfy_blind_down()
+        if tilt_step == TILT_MIN_STEP:
+            _LOGGER.debug("_async_tilt_blind_to_step; tilting to CLOSED and waiting")
+            await self._async_lower_blind()
+        else:
+            # Move to mid point if not already there or if we've been told to go there
+            if tilt_step == TILT_MID_STEP or self._myattr_tilt_step != TILT_MID_STEP:
+                sync_time = self._myattr_sync_secs if not(self._myattr_is_raised) else self._myattr_close_secs
 
-    async def _async_do_open_blind(self):
-        """Callback to open a Somfy blind"""
-        _LOGGER.info("SOMFY VENETIAN OPENING BLIND")
-        if self._motion_allowed():
-            await self._async_somfy_blind_up()
+                _LOGGER.debug("_async_tilt_blind_to_step; tilting to MID and waiting " + str(sync_time))
+                await self._async_send(self._device.send_stop)
+                await self._async_wait_and_set_position(sync_time, False, TILT_MID_STEP)
 
-    async def _async_do_tilt_blind_to_mid(self):
-        """Callback to tilt a Somfy blind to mid"""
-        _LOGGER.info("SOMFY VENETIAN TILTING BLIND TO MID")
-        if self._motion_allowed():
-            await self._set_state(STATE_OPENING, BLIND_POS_CLOSED, self._tilt_step)
-            await self._async_send_command(CMD_SOMFY_STOP)
-        return self._blindSyncSecs
+            if tilt_step == 1:
+                self._attr_is_opening = True
+                self.async_write_ha_state()
 
-    async def _async_somfy_blind_down(self):
-        """Callback to move a Somfy venetian blind down - varies between regions"""
-        if self._motion_allowed():
-            if self._venetian_blind_mode == CONST_VENETIAN_BLIND_MODE_US:
-                await self._async_send_command(CMD_SOMFY_DOWN05SEC)
-            elif self._venetian_blind_mode == CONST_VENETIAN_BLIND_MODE_EU:
-                await self._async_send_command(CMD_SOMFY_DOWN2SEC)
-            else:
-                _LOGGER.warn("Unexpected DOWN command for a none-EU/US device")
-                await self._async_send_command(CMD_SOMFY_DOWN)
+                _LOGGER.debug("_async_tilt_blind_to_step; tilting DOWN and waiting " + str(self._myattr_tilt_pos1_secs))
+                await self._async_send(self._device.send_down05sec)
+                await asyncio.sleep(self._myattr_tilt_pos1_secs)
 
-    async def _async_somfy_blind_up(self):
-        """Callback to move a Somfy venetian blind up - varies between regions"""
-        if self._motion_allowed():
-            if self._venetian_blind_mode == CONST_VENETIAN_BLIND_MODE_US:
-                await self._async_send_command(CMD_SOMFY_UP05SEC)
-            elif self._venetian_blind_mode == CONST_VENETIAN_BLIND_MODE_EU:
-                await self._async_send_command(CMD_SOMFY_UP2SEC)
-            else:
-                _LOGGER.warn("Unexpected UP command for a none-EU/US device")
-                await self._async_send_command(CMD_SOMFY_UP)
+                await self._async_send(self._device.send_stop)
+                self._set_position(False, tilt_step)
+                self.async_write_ha_state()
+            elif tilt_step == 3:
+                self._attr_is_opening = True
+                self.async_write_ha_state()
+
+                _LOGGER.debug("_async_tilt_blind_to_step; tilting UP and waiting " + str(self._myattr_tilt_pos2_secs))
+                await self._async_send(self._device.send_up05sec)
+                await asyncio.sleep(self._myattr_tilt_pos2_secs)
+
+                await self._async_send(self._device.send_stop)
+                self._set_position(False, tilt_step)
+                self.async_write_ha_state()
