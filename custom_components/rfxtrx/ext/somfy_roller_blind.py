@@ -40,7 +40,7 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-ICON_PATH = "/local/rfxtrx/roller"
+ICON_PATH = "/hacsfiles/rfxtrx-stateful-blinds-icons/icons/roller"
 
 LIFT_POS_CLOSED = 0
 LIFT_POS_MID = 1

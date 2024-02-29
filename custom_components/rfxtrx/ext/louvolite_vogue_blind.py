@@ -17,7 +17,7 @@ from .abs_tilting_cover import (
 
 _LOGGER = logging.getLogger(__name__)
 
-ICON_PATH = "/local/rfxtrx/vertical"
+ICON_PATH = "/hacsfiles/rfxtrx-stateful-blinds-icons/icons/vertical"
 
 DEVICE_TYPE = "Vogue Vertical"
 

@@ -53,19 +53,9 @@ The Louvolite Vogue vertical blinds motor allows the blinds to be tilted to 0, 4
 
 ## Service Operations
 
-The component adds three new scripting operations:
+The component adds a new scripting operation:
 
-- **`RFXtrx.decrease_cover_tilt`** - This operation is intended for button handlers and decreases the amount of tilt by one "step". It can be used in two ways:
-
-  1. If your button sends an event each time it is clicked then use with no parameters to decrease the tilt amount each time the button is clicked. If the blind is fully tilted then nothing happens.
-  2. If your button sends a "`hold`" event when held and then a "`release`" event when released then add a "`repeat_automatically`" parameter. In this case the blind will keep stepping until either fully stepped or a "`cover.stop_cover_tilt`" operation is called.
-
-- **`RFXtrx.increase_cover_tilt`** - This operation is intended for button handlers and increases the amount of tilt by one "step". It can be used in two ways:
-
-  1. If your button sends an event each time it is clicked then use with no parameters to increase the tilt amount each time the button is clicked. If the blind is fully tilted then nothing happens.
-  2. If your button sends a "`hold`" event when held and then a "`release`" event when released then add a "`repeat_automatically`" parameter. In this case the blind will keep stepping until either fully stepped or a "`cover.stop_cover_tilt`" operation is called.
-
-- **`RFXtrx.update_cover_position`** - Sets the internal state of the position and tilt position of the blind. This is intended to be used when defining a Somfy group device. In this case the tilt states of any blinds in the Somfy group would be wrong. To solve this simply create an automation to update the states of the individual blinds in the group when the group device changes. For example this automation updates the 5 individual blinds that make up Somfy group "`cover.living_room`" whenever the group tilt position changes:
+- **`RFXtrx.update_cover_position`** - Sets the internal state of the position and tilt position of the blind.<br/><br/>This is intended to be used when defining a Somfy group device. In that case the tilt states of any blinds in the Somfy group would be wrong. To solve this simply create an automation to update the states of the individual blinds in the group when the group device changes. For example this automation updates the 5 individual blinds that make up Somfy group "`cover.living_room`" whenever the group tilt position changes:
 
 ```
     - alias: "Living Room sync blind state"
@@ -73,15 +63,12 @@ The component adds three new scripting operations:
       trigger:
       - platform: state
         entity_id: cover.living_room
-        attribute: current_position
-      - platform: state
-        entity_id: cover.living_room
-        attribute: current_tilt_position
       action:
       - service: RFXtrx.update_cover_position
         data:
           position: '{{ state_attr("cover.living_room", "current_position") }}'
           tilt_position: '{{ state_attr("cover.living_room", "current_tilt_position") }}'
+          state: '{{ states("cover.living_room" }}'
         target:
           entity_id:
           - cover.living_room_1
