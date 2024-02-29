@@ -81,4 +81,4 @@ The component adds a new scripting operation:
 
 ---
 
-### [<<< Back to README <<<](../README.md)
+### [<<< Back to README <<<](./README.md)

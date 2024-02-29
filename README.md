@@ -52,7 +52,7 @@ Why only those blinds? Simply because those are the ones I have so those are the
 
 # So how do I use it?
 
-Check the [**_How to Use_**](docs/USING.md) documentation
+Check the [**_How to Use_**](./USING.md) documentation
 
 # How do I get it?
 
