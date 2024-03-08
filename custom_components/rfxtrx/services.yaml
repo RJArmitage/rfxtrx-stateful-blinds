@@ -1,11 +1,31 @@
 send:
-  name: Send
-  description: Sends a raw event on radio.
   fields:
     event:
-      name: Event
-      description: A hexadecimal string to send.
       required: true
-      example: "0b11009e00e6116202020070"
+      example: '0b11009e00e6116202020070'
+      selector:
+        text:
+
+update_cover_position:
+  target:
+    entity:
+      domain: cover
+  fields:
+    position:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: '%'
+    tilt_position:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: '%'
+    state:
+      required: true
       selector:
         text:

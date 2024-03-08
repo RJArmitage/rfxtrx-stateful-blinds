@@ -1,10 +1,14 @@
-# What is this?
+# What is it?
 
-This component extends the built-in Home Assistant integration for RFXtrx covers. It attempts to add cover "state" to the basic capabilities. This is only available for blinds that support it. All other RFXtrx operations fall back on the in-built support from Home Assistant.
+Provides stateful tilt support for Somfy venetian and Louvolite vertical blinds in Home Assistant.
+
+# What does it do?
+
+This component extends the built-in Home Assistant integration for **_RFXtrx_** covers. It attempts to add cover "state" to the basic capabilities. This is only available for blinds that support it. All other RFXtrx operations fall back on the in-built support from Home Assistant.
 
 - _State?_ The idea is that a blind has some idea of whether it is up, down, tilted or whatever and by how much.
 - _Why is that useful?_ If you only control blinds via a controller then it isn't. You can see the blind and know which button to press on your controller to get what you want. If it's half closed and you wasnt it fully closed then you'll press the button to get what you want. However, if you are using a script then that doesn't work. Also, some blinds - such as my Somfy blinds - react differently to the same controller operation depending upon their state. Again in a script that's no use. A script needs a consistent result to an order.
-- _So what does this give me?_ With state in Home Assistant then the component will know how much tilt the blind currently has so that it knows how much extra tilt to apply to get the requested result. So, if the blind is currently 20% tilted and we want 70% tilt, the component knows to apply 50% more tilt to what it already has.
+- _So what does this give me?_ With state in Home Assistant then the component will know how much tilt the blind currently has so that it knows how much extra tilt to apply to get the requested result. So, if the blind is currently 20% tilted and we want 70% tilt, the component knows to apply 50% more tilt to what it already has.<br/><br/>This in turn allows Home Assistant to show blind tilt status in its icons:<br/><br/><div style="text-align: center"><img src="https://raw.githubusercontent.com/RJArmitage/rfxtrx-stateful-blinds-icons/main/dist/icons/venetian/active/50.svg" alt="Inactive fully tilted open venetian blind" style="height: 75px; width:75px;"/> <img src="https://raw.githubusercontent.com/RJArmitage/rfxtrx-stateful-blinds-icons/main/dist/icons/venetian/inactive/20.svg" alt="Inactive partially tilted closed venetian blind" style="height: 75px; width:75px;"/> <img src="https://raw.githubusercontent.com/RJArmitage/rfxtrx-stateful-blinds-icons/main/dist/icons/venetian/active/mid.svg" alt="Active partially lifted venetian blind" style="height: 75px; width:75px;"/> <img src="https://raw.githubusercontent.com/RJArmitage/rfxtrx-stateful-blinds-icons/main/dist/icons/venetian/active/up.svg" alt="Active fully lifted venetian blind" style="height: 75px; width:75px;"/> <img src="https://raw.githubusercontent.com/RJArmitage/rfxtrx-stateful-blinds-icons/main/dist/icons/vertical/active/25.svg" alt="Inactive partially fully tilted closed vertical blind" style="height: 75px; width:75px;"/> <img src="https://raw.githubusercontent.com/RJArmitage/rfxtrx-stateful-blinds-icons/main/dist/icons/vertical/inactive/00.svg" alt="Inactive fully tilted closed vertical blind" style="height: 75px; width:75px;"/> <img src="https://raw.githubusercontent.com/RJArmitage/rfxtrx-stateful-blinds-icons/main/dist/icons/vertical/active/50.svg" alt="Active fully tilted open vertical blind" style="height: 75px; width:75px;"/> </div><br/>The package also provides icons that allow the integration to show the basic level of lift of roller blinds as well as whether the blind is classed as "open" or "closed":<br/><br/><div style="text-align: center"> <img src="https://raw.githubusercontent.com/RJArmitage/rfxtrx-stateful-blinds-icons/main/dist/icons/roller/active/99.svg" alt="Active fully opened roller blind" style="height: 75px; width:75px;"/> <img src="https://raw.githubusercontent.com/RJArmitage/rfxtrx-stateful-blinds-icons/main/dist/icons/roller/inactive/50.svg" alt="Inactive partially closed roller blind" style="height: 75px; width:75px;"/> <img src="https://raw.githubusercontent.com/RJArmitage/rfxtrx-stateful-blinds-icons/main/dist/icons/roller/inactive/00.svg" alt="Inactive fully closed roller blind" style="height: 75px; width:75px;"/> </div>
 
 # Why does it exist? Do I need it?
 
@@ -46,8 +50,39 @@ Why only those blinds? Simply because those are the ones I have so those are the
 
 2. At present the full tilt support for Somfy venetian blinds does not work. The RFXtrx documentation says that you can perform a tilt by sending either a 0.5 sec or 2 sec up or down operation depending if you are in EU or US mode. However this simply does not work on my blinds and always either lifts or closes the blind. I suspect the information is out of date for modern motors (my blinds are very new). If better support is added to the RFXtrx firmware then support will be added to this component. This will be great as I'd like to be able to programmatically step to any tilt position. At the moment this component simulates an intermediate tilt position operation. This at least makes the blinds much more useful to me.
 
----
+# So how do I use it?
 
-### [>>> How to Install >>>](docs/INSTALLING.md)
+Check the [**_How to Use_**](./USING.md) documentation
 
-### [>>> How to Use >>>](docs/USING.md)
+# How do I get it?
+
+If you've read to here and still want to try it then installation is best done through HACS.
+
+## HACS (Recommended)
+
+This is the recommended way to install **_rfxtrx-stateful-blinds_** as any updates will be installed automatically. However as the package replaces the standard **_RFXCOM RFXtrx_** integration it is not available in the default HACS Community Store.
+
+To install:
+
+- Open HACS (installation instructions are [here](https://hacs.xyz/docs/installation/installation/))
+- Go to the "**Integrations**" section
+- Click the top-right button with a "**hamburger**" icon "<img src="https://raw.githubusercontent.com/RJArmitage/rfxtrx-stateful-blinds/main/hamburger-icon.png" alt="Hambuger icon"/>"
+- Select "**Custom repositories**"
+  - Enter the Repository URL "**https://github.com/RJArmitage/rfxtrx-stateful-blinds**"
+  - Enter the Category "**Integration**"
+  - Click "**ADD**"
+- Close the dialog
+- You should now see "**_RFXCOM RFXtrx Stateful Blinds Icons_**" in the integrations list. Click and install it as usual
+
+## Manual installation
+
+1. Download the contents of the "`custom_components/rfxtrx`" folder from this project into a new folder "`<config>/custom_components/rfxtrx`" where "`<config>`" is the directory where your "`configuration.yaml`" file is located - so for example "`/root/config/custom_components/rfxtrx`"
+
+2. Restart Home Assistant
+
+If you want the stateful blinds icons then you'll also need to install the [RFXCOM RFXtrx Stateful Blinds Icons](https://github.com/RJArmitage/rfxtrx-stateful-blinds-icons) package. That's a little easier as it should be available by default in HACS:
+
+- Open HACS (installation instructions are [here](https://hacs.xyz/docs/installation/installation/))
+- Go to the "**Frontend**" section
+- Click the button with an "**+**" icon
+- Search for "**RFXCOM RFXtrx Stateful Blind Icons**" and install it

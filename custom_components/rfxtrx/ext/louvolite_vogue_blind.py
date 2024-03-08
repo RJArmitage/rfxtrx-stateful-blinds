@@ -1,33 +1,23 @@
+"""Support for RFXtrx covers."""
 from __future__ import annotations
+
 import logging
+from typing import Any
+
+import RFXtrx as rfxtrxmod
+
+from .. import DeviceTuple
+
 from .abs_tilting_cover import (
     AbstractTiltingCover,
-    BLIND_POS_CLOSED
-)
-from homeassistant.const import (
-    STATE_CLOSED,
-    STATE_CLOSING,
-    STATE_OPENING
-)
-from .const import (
-    CONF_CLOSE_SECONDS,
-    CONF_COLOUR_ICON,
-    CONF_OPEN_SECONDS,
-    CONF_CUSTOM_ICON,
-    CONF_COLOUR_ICON,
-    CONF_PARTIAL_CLOSED,
-    CONF_SIGNAL_REPETITIONS,
-    CONF_SIGNAL_REPETITIONS_DELAY_MS,
-    DEF_CLOSE_SECONDS,
-    DEF_COLOUR_ICON,
-    DEF_OPEN_SECONDS,
-    DEF_CUSTOM_ICON,
-    DEF_COLOUR_ICON,
-    DEF_PARTIAL_CLOSED,
-    DEF_SIGNAL_REPETITIONS_DELAY_MS
+    TILT_MAX_STEP,
+    TILT_MID_STEP,
+    TILT_MIN_STEP
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+ICON_PATH = "/hacsfiles/rfxtrx-stateful-blinds-icons/icons/vertical"
 
 DEVICE_TYPE = "Vogue Vertical"
 
@@ -37,124 +27,126 @@ CMD_VOGUE_45_DEGREES = 0x02
 CMD_VOGUE_90_DEGREES = 0x03
 CMD_VOGUE_135_DEGREES = 0x04
 
-ICON_PATH = "/local/rfxtrx/vertical"
 
-# Event 0919130400A1DB010000
-
+# Event 0919130400A1DB010000 Patio Window
 
 class LouvoliteVogueBlind(AbstractTiltingCover):
-    """Representation of a RFXtrx cover."""
+    """Representation of a LouvoliteVogueBlind RFXtrx cover."""
 
-    def __init__(self, device, device_id, entity_info, event=None):
+    def __init__(
+        self,
+        device: rfxtrxmod.RFXtrxDevice,
+        device_id: DeviceTuple,
+        entity_info: dict[str, Any],
+        event: rfxtrxmod.RFXtrxEvent = None,
+    ) -> None:
+        """Initialize the LouvoliteVogueBlind RFXtrx cover device."""
+
         device.type_string = DEVICE_TYPE
+        
+        super().__init__(
+            device=device,
+            device_id=device_id,
+            entity_info=entity_info,
+            event=event
+        )
 
-        openSecs = entity_info.get(CONF_OPEN_SECONDS, DEF_OPEN_SECONDS)
-        closeSecs = entity_info.get(CONF_CLOSE_SECONDS, DEF_CLOSE_SECONDS)
-
-        super().__init__(device, device_id,
-                         entity_info[CONF_SIGNAL_REPETITIONS],
-                         entity_info.get(
-                             CONF_SIGNAL_REPETITIONS_DELAY_MS, DEF_SIGNAL_REPETITIONS_DELAY_MS),
-                         event,
-                         2,  #  2 steps to mid point
-                         True,  # Supports mid point
-                         False,  # Does not support lift
-                         False,  # Do not lift on open
-                         False,  # Does not require sync on mid point
-                         min(openSecs, closeSecs),  # Open time
-                         max(openSecs, closeSecs),  # Close time
-                         max(openSecs, closeSecs),  # Sync time ms
-                         2000  # Ms for each step
-                         )
-        self._customIcon = entity_info.get(CONF_CUSTOM_ICON, DEF_CUSTOM_ICON)
-        self._colourIcon = entity_info.get(CONF_COLOUR_ICON, DEF_COLOUR_ICON)
-        self._partialClosed = entity_info.get(
-            CONF_PARTIAL_CLOSED, DEF_PARTIAL_CLOSED)
-
-        _LOGGER.info("Create Louvolite Vogue tilting blind " + str(device_id))
 
     @property
-    def entity_picture(self):
+    def _entity_picture(self) -> str | None:
         """Return the icon property."""
-        if self._customIcon:
-            if self.is_opening or self.is_closing:
-                icon = "move.svg"
-                closed = self._lastClosed
-            else:
-                tilt = self._steps_to_tilt(self._tilt_step)
-                if tilt <= 15:
-                    icon = "00.svg"
-                    closed = True
-                elif tilt <= 40:
-                    icon = "25.svg"
-                    closed = self._partialClosed
-                elif tilt <= 60:
-                    icon = "50.svg"
-                    closed = False
-                elif tilt <= 85:
-                    icon = "75.svg"
-                    closed = self._partialClosed
-                else:
-                    icon = "99.svg"
-                    closed = True
-            if self._colourIcon and not(closed):
-                icon = ICON_PATH + "/active/" + icon
-            else:
-                icon = ICON_PATH + "/inactive/" + icon
-            self._lastClosed = closed
-            _LOGGER.debug("Returned icon attribute = " + icon)
+        if self._is_moving:
+            icon = "move.svg"
+            closed = False
+        elif self._myattr_is_raised:
+            icon = "open.svg"
+            closed = False
+        elif self._myattr_tilt_step == TILT_MIN_STEP:
+            icon = "00.svg"
+            closed = True
+        elif self._myattr_tilt_step == 1:
+            icon = "25.svg"
+            closed = self._myattr_partial_is_closed
+        elif self._myattr_tilt_step == TILT_MID_STEP:
+            icon = "50.svg"
+            closed = False
+        elif self._myattr_tilt_step == 3:
+            icon = "75.svg"
+            closed = self._myattr_partial_is_closed
+        elif self._myattr_tilt_step == TILT_MAX_STEP:
+            icon = "99.svg"
+            closed = True
         else:
-            icon = None
+            icon = "mid.svg"
+            closed = False
+
+        if self._myattr_colour_open and not(closed):
+            icon = ICON_PATH + "/active/" + icon
+        else:
+            icon = ICON_PATH + "/inactive/" + icon
+
         return icon
 
-    async def _async_tilt_blind_to_step(self, steps, target):
-        """Callback to tilt the blind to some position"""
-        _LOGGER.info("LOUVOLITE TILTING BLIND")
-        if target == 0:
-            movement = STATE_CLOSING
-            command = CMD_VOGUE_CLOSE_CCW
-        elif target == 1:
-            movement = STATE_OPENING
-            command = CMD_VOGUE_45_DEGREES
-        elif target == 2:
-            movement = STATE_OPENING
-            command = CMD_VOGUE_90_DEGREES
-        elif target == 3:
-            movement = STATE_OPENING
-            command = CMD_VOGUE_135_DEGREES
+
+    async def _async_raise_blind(self) -> None:
+        """Lift the cover."""
+        _LOGGER.info("Invoked _async_raise_blind")
+        await self._async_tilt_blind_to_step(TILT_MID_STEP)
+
+
+    async def _async_lower_blind(self) -> None:
+        """Lower the cover."""
+        _LOGGER.info("Invoked _async_lower_blind")
+        await self._async_tilt_blind_to_step(TILT_MIN_STEP)
+
+
+    async def _async_stop_blind(self) -> None:
+        """Stop the cover."""
+        _LOGGER.info("Invoked _async_stop_blind")
+
+
+    async def _async_tilt_blind_to_step(self, tilt_step) -> None:
+        """Move the cover tilt to a preset position."""
+        _LOGGER.info("Invoked _async_tilt_blind_to_mid_step; tilt_step = " + str(tilt_step))
+
+        if tilt_step == 0:
+            self._attr_is_closing = True
+            self.async_write_ha_state()
+
+            _LOGGER.debug("_async_tilt_blind_to_step; tilting CMD_VOGUE_CLOSE_CCW and waiting")
+            await self._async_send_repeat(self._device.send_command, CMD_VOGUE_CLOSE_CCW)
+            await self._async_wait_and_set_position(self._myattr_close_secs, False, tilt_step)
+
+        elif tilt_step == 1:
+            self._attr_is_closing = self._myattr_partial_is_closed
+            self._attr_is_opening = not(self._myattr_partial_is_closed)
+            self.async_write_ha_state()
+
+            _LOGGER.debug("_async_tilt_blind_to_step; tilting CMD_VOGUE_45_DEGREES and waiting " + str(self._myattr_tilt_pos1_secs))
+            await self._async_send_repeat(self._device.send_command, CMD_VOGUE_45_DEGREES)
+            await self._async_wait_and_set_position(self._myattr_open_secs, False, tilt_step)
+
+        elif tilt_step == 2:
+            self._attr_is_opening = True
+            self.async_write_ha_state()
+
+            _LOGGER.debug("_async_tilt_blind_to_step; tilting CMD_VOGUE_90_DEGREES and waiting " + str(self._myattr_tilt_pos2_secs))
+            await self._async_send_repeat(self._device.send_command, CMD_VOGUE_90_DEGREES)
+            await self._async_wait_and_set_position(self._myattr_open_secs, False, tilt_step)
+
+        elif tilt_step == 3:
+            self._attr_is_closing = self._myattr_partial_is_closed
+            self._attr_is_opening = not(self._myattr_partial_is_closed)
+            self.async_write_ha_state()
+
+            _LOGGER.debug("_async_tilt_blind_to_step; tilting CMD_VOGUE_135_DEGREES and waiting " + str(self._myattr_tilt_pos2_secs))
+            await self._async_send_repeat(self._device.send_command, CMD_VOGUE_135_DEGREES)
+            await self._async_wait_and_set_position(self._myattr_open_secs, False, tilt_step)
+
         else:
-            movement = STATE_CLOSING
-            command = CMD_VOGUE_CLOSE_CW
+            self._attr_is_closing = True
+            self.async_write_ha_state()
 
-        delay = self._blindOpenSecs if steps <= 2 else self._blindCloseSecs
-
-        if self._motion_allowed():
-            await self._set_state(movement, BLIND_POS_CLOSED, self._tilt_step)
-            await self._async_send_command(command)
-            await self._wait_and_set_state(delay, movement, STATE_CLOSED, BLIND_POS_CLOSED, target)
-
-        return target
-
-    async def _async_do_close_blind(self):
-        """Callback to close the blind"""
-        _LOGGER.info("LOUVOLITE CLOSING BLIND")
-        if self._motion_allowed():
-            await self._set_state(STATE_CLOSING, BLIND_POS_CLOSED, self._tilt_step)
-            await self._async_send_command(CMD_VOGUE_CLOSE_CCW)
-        return self._blindCloseSecs
-
-    async def _async_do_open_blind(self):
-        """Callback to open the blind"""
-        _LOGGER.info("LOUVOLITE OPENING BLIND")
-        if self._motion_allowed():
-            await self._set_state(STATE_OPENING, BLIND_POS_CLOSED, self._tilt_step)
-            await self._async_send_command(CMD_VOGUE_90_DEGREES)
-        return self._blindOpenSecs
-
-    async def _async_do_tilt_blind_to_mid(self):
-        """Callback to tilt the blind to mid"""
-        _LOGGER.info("LOUVOLITE TILTING BLIND TO MID")
-        if self._motion_allowed():
-            await self._set_state(STATE_OPENING, BLIND_POS_CLOSED, self._tilt_step)
-            await self._async_send_command(CMD_VOGUE_90_DEGREES)
-        return self._blindOpenSecs
+            _LOGGER.debug("_async_tilt_blind_to_step; tilting CMD_VOGUE_CLOSE_CW and waiting " + str(self._myattr_tilt_pos2_secs))
+            await self._async_send_repeat(self._device.send_command, CMD_VOGUE_CLOSE_CW)
+            await self._async_wait_and_set_position(self._myattr_close_secs, False, tilt_step)

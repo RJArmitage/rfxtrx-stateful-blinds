@@ -1,441 +1,351 @@
-"""Light support for switch entities."""
+"""Support for RFXtrx covers."""
 from __future__ import annotations
+
 import logging
+from typing import Any
 import asyncio
-import time
-from typing import (
-    Any,
-    Callable,
-    Optional,
-    Sequence,
-    cast
-)
-from .. import RfxtrxCommandEntity
+from collections.abc import Callable
+
+import RFXtrx as rfxtrxmod
+
+from homeassistant.core import callback
 from homeassistant.components.cover import (
-    DEVICE_CLASS_BLIND,
+    CoverEntity, 
+    CoverEntityFeature,
+    CoverDeviceClass,
     ATTR_POSITION
 )
-from homeassistant.components.cover import CoverEntity
-from homeassistant.const import (
-    STATE_CLOSED,
-    STATE_CLOSING,
-    STATE_OPEN,
-    STATE_OPENING
-)
-from homeassistant.core import callback
+
+from .. import DeviceTuple, RfxtrxCommandEntity, _Ts
 
 from .const import (
     CONF_CLOSE_SECONDS,
-    CONF_OPEN_SECONDS,
-    CONF_SYNC_SECONDS,
-    CONF_CUSTOM_ICON,
     CONF_COLOUR_ICON,
+    CONF_CUSTOM_ICON,
+    CONF_OPEN_SECONDS,
     CONF_PARTIAL_CLOSED,
+    CONF_ROLLER_MID_ON_CLOSE,
     CONF_SIGNAL_REPETITIONS,
     CONF_SIGNAL_REPETITIONS_DELAY_MS,
+    CONF_SYNC_SECONDS,
     DEF_CLOSE_SECONDS,
-    DEF_OPEN_SECONDS,
-    DEF_SYNC_SECONDS,
-    DEF_CUSTOM_ICON,
     DEF_COLOUR_ICON,
+    DEF_CUSTOM_ICON,
+    DEF_OPEN_SECONDS,
     DEF_PARTIAL_CLOSED,
+    DEF_ROLLER_MID_ON_CLOSE,
     DEF_SIGNAL_REPETITIONS_DELAY_MS,
-    SUPPORT_OPEN,
-    SUPPORT_CLOSE,
-    SUPPORT_SET_POSITION,
-    SUPPORT_STOP,
-    ATTR_MOVEMENT_ALLOWED
-
+    DEF_SYNC_SECONDS,
 )
-
-ICON_PATH = "/local/rfxtrx/roller"
-
-CMD_SOMFY_STOP = 0x00
-CMD_SOMFY_UP = 0x01
-CMD_SOMFY_DOWN = 0x03
-
-# mypy: allow-untyped-calls, allow-untyped-defs, no-check-untyped-defs
 
 _LOGGER = logging.getLogger(__name__)
 
-DEFAULT_NAME = "Blinds Control"
-DEVICE_TYPE = "Somfy Roller"
+ICON_PATH = "/hacsfiles/rfxtrx-stateful-blinds-icons/icons/roller"
 
-AUTO_STEP_CLICK_SEC = 2
-COMMAND_DEBOUNCE_SEC = 0.5
+LIFT_POS_CLOSED = 0
+LIFT_POS_MID = 1
+LIFT_POS_OPEN = 2
 
-# Values returned for blind position in various states
-BLIND_POS_OPEN = 100
-BLIND_POS_STOPPED = 50
-BLIND_POS_CLOSED = 0
-
-# Represents a cover entity that has slats - either vertical or horizontal. Thios differs from a cover in that:
-# - Opening the blind tilts the slats to allow light. Not moving the blind out of the window
-# - Closing the blind requires the blind to be fully lowered into the window and the slats to be in a tilted position
-#
-# Properties:
-#   Config:
-#     _blindMaxSteps - number of steps to tilt the blind from fully tilted to the mid position
-#     _blindMidSteps - number of steps to tilt the blind from fully tilted to the mid position
-#     _hasMidCommand - Boolean - TRUE if the blind has an explicit command for the mid position
-#     _syncMidPos - boolean - TRUE if we should send a "mid" position command each time we cross the mid position
-#     _blindCloseSecs - number of seconds to wait for the blind to fully close from fully open position
-#     _blindOpenSecs - number of seconds to wait for the blind to fully open from fully closed position
-#   State:
-#     _lift_position - reported position of the blind
-#     _tilt_step - step posiotion of the tilt - related to the _tilt_step
-#     _state - what the blind is curfrently doing - STATE_OPEN/STATE_OPENING/STATE_CLOSED/STATE_CLOSING
-#
+# Event 071a000002010101 Kitchen
 
 
 class SomfyRollerBlind(RfxtrxCommandEntity, CoverEntity):
-    """Representation of a RFXtrx cover supporting tilt and, optionally, lift."""
+    """Representation of a SomfyRollerBlind RFXtrx cover supporting lift."""
 
-    def __init__(self, device, device_id, entity_info, event=None):
-        self._blindCloseSecs = entity_info.get(
-            CONF_CLOSE_SECONDS, DEF_CLOSE_SECONDS)
-        self._blindOpenSecs = entity_info.get(
-            CONF_OPEN_SECONDS, DEF_OPEN_SECONDS)
-        self._blindSyncSecs = entity_info.get(
-            CONF_SYNC_SECONDS, DEF_SYNC_SECONDS)
-        self._signalRepetitions = entity_info[CONF_SIGNAL_REPETITIONS]
-        self._signalRepetitionsDelay = entity_info.get(
-            CONF_SIGNAL_REPETITIONS_DELAY_MS, DEF_SIGNAL_REPETITIONS_DELAY_MS) / 1000
-        self._customIcon = entity_info.get(CONF_CUSTOM_ICON, DEF_CUSTOM_ICON)
-        self._colourIcon = entity_info.get(CONF_COLOUR_ICON, DEF_COLOUR_ICON)
-        self._partialClosed = entity_info.get(
-            CONF_PARTIAL_CLOSED, DEF_PARTIAL_CLOSED)
-        self._allowMovement = True
+    _device: rfxtrxmod.RollerTrolDevice | rfxtrxmod.RfyDevice | rfxtrxmod.LightingDevice
+
+    def __init__(
+        self,
+        device: rfxtrxmod.RFXtrxDevice,
+        device_id: DeviceTuple,
+        entity_info: dict[str, Any],
+        event: rfxtrxmod.RFXtrxEvent = None,
+    ) -> None:
+        """Initialize the SomfyRollerBlind RFXtrx cover device."""
 
         super().__init__(device, device_id, event)
 
-        _LOGGER.info("New somfy roller cover config," +
-                     " signal_repetitions=" + str(self._signalRepetitions) +
-                     " signal_repetitions_delay=" + str(self._signalRepetitionsDelay) +
-                     " openSecs=" + str(self._blindOpenSecs) +
-                     " closeSecs=" + str(self._blindCloseSecs) +
-                     " syncSecs=" + str(self._blindSyncSecs))
+        self._attr_is_closed: bool | None = True
+        self._attr_current_cover_position = 0
+        self._attr_device_class = CoverDeviceClass.SHADE
 
-    async def async_added_to_hass(self):
+        self._attr_supported_features = (
+            CoverEntityFeature.OPEN |
+            CoverEntityFeature.CLOSE |
+            CoverEntityFeature.SET_POSITION |
+            CoverEntityFeature.STOP
+        )
+
+        self._myattr_repetitions = entity_info.get(CONF_SIGNAL_REPETITIONS, 1)
+        self._myattr_repetition_delay = entity_info.get(CONF_SIGNAL_REPETITIONS_DELAY_MS, DEF_SIGNAL_REPETITIONS_DELAY_MS) / 1000
+        self._myattr_close_secs = entity_info.get(CONF_CLOSE_SECONDS, DEF_CLOSE_SECONDS)
+        self._myattr_open_secs = entity_info.get(CONF_OPEN_SECONDS, DEF_OPEN_SECONDS)
+        self._myattr_sync_secs = entity_info.get(CONF_SYNC_SECONDS, DEF_SYNC_SECONDS) / 1000
+        self._myattr_custom_icon = entity_info.get(CONF_CUSTOM_ICON, DEF_CUSTOM_ICON)
+        self._myattr_colour_open = entity_info.get(CONF_COLOUR_ICON, DEF_COLOUR_ICON)
+        self._myattr_partial_is_closed = entity_info.get(CONF_PARTIAL_CLOSED, DEF_PARTIAL_CLOSED)
+        self._myattr_close_to_mid = entity_info.get(CONF_ROLLER_MID_ON_CLOSE, DEF_ROLLER_MID_ON_CLOSE)
+
+        self._myattr_lift_step = LIFT_POS_CLOSED
+
+
+    async def async_added_to_hass(self) -> None:
         """Restore device state."""
-        _LOGGER.debug("Called async_added_to_hass")
-
-        self._lift_position = BLIND_POS_OPEN
-        self._state = STATE_OPEN
-        self._lastClosed = False
-        self._lastCommandTime = time.time()
-
         await super().async_added_to_hass()
 
         if self._event is None:
             old_state = await self.async_get_last_state()
             if old_state is not None:
-                if 'current_position' in old_state.attributes:
-                    _LOGGER.info("State = " + str(old_state))
-                    self._lift_position = old_state.attributes['current_position']
-                    if self._lift_position >= BLIND_POS_OPEN:
-                        self._state = STATE_OPEN
-                        self._lift_position = BLIND_POS_OPEN
-                        self._lastClosed = False
-                    elif self._lift_position <= BLIND_POS_CLOSED:
-                        self._state = STATE_CLOSED
-                        self._lift_position = BLIND_POS_CLOSED
-                        self._lastClosed = True
-                    else:
-                        self._state = STATE_OPEN
-                        self._lift_position = BLIND_POS_STOPPED
-                        self._lastClosed = False
+                old_pos = old_state.attributes['current_position']
+                _LOGGER.info("async_added_to_hass: old_pos = " + str(old_pos))
 
-                    _LOGGER.info("Recovered state=" + str(self._state) +
-                                 " position=" + str(self._lift_position))
+                self._set_position(self._pos_to_steps(old_pos))
 
-    @ property
-    def available(self) -> bool:
-        """Return true if device is available - not sure what makes it unavailable."""
-        return True
 
-    @ property
-    def current_cover_position(self):
-        """Return the current cover position property."""
-        if self._lift_position <= BLIND_POS_CLOSED:
-            position = BLIND_POS_CLOSED
-        elif self._lift_position >= BLIND_POS_OPEN:
-            position = BLIND_POS_OPEN
-        else:
-            position = BLIND_POS_STOPPED
-
-        _LOGGER.debug(
-            "Returned current_cover_position attribute = " + str(position))
-        return position
-
-    @ property
-    def is_opening(self):
-        """Return the is_opening property."""
-        opening = self._state == STATE_OPENING
-        _LOGGER.debug("Returned is_opening attribute = " + str(opening))
-        return opening
-
-    @ property
-    def is_closing(self):
-        """Return the is_closing property."""
-        closing = self._state == STATE_CLOSING
-        _LOGGER.debug("Returned is_closing attribute = " + str(closing))
-        return closing
-
-    @ property
-    def is_closed(self):
-        """Return the is_closed property."""
-        closed = self._state == STATE_CLOSED
-        _LOGGER.debug("Returned is_closed attribute = " + str(closed))
-        return closed
-
-    @ property
-    def device_class(self):
-        """Return the device class."""
-        _LOGGER.debug("Returned device_class attribute")
-        return DEVICE_CLASS_BLIND
-
-    @ property
-    def supported_features(self):
-        """Flag supported features."""
-        _LOGGER.debug("Returned supported_features attribute")
-        features = SUPPORT_CLOSE | SUPPORT_OPEN | SUPPORT_STOP | SUPPORT_SET_POSITION
-        return features
-
-    @ property
-    def should_poll(self):
-        """No polling needed for a RFXtrx switch."""
-        return False
-
-    @ property
-    def assumed_state(self):
-        """Return true if unable to access real state of entity."""
-        return False
-
-    @property
-    def entity_picture(self):
-        """Return the icon property."""
-        if self._customIcon:
-            if self.is_opening or self.is_closing:
-                icon = "move.svg"
-                closed = self._lastClosed
-            else:
-                pos = self._lift_position
-                if pos <= BLIND_POS_CLOSED:
-                    icon = "00.svg"
-                    closed = True
-                elif pos >= BLIND_POS_OPEN:
-                    icon = "99.svg"
-                    closed = False
-                else:
-                    icon = "50.svg"
-                    closed = self._partialClosed
-            if self._colourIcon and not(closed):
-                icon = ICON_PATH + "/active/" + icon
-            else:
-                icon = ICON_PATH + "/inactive/" + icon
-            self._lastClosed = closed
-            _LOGGER.debug("Returned icon attribute = " + icon)
-        else:
-            icon = None
-        return icon
-
-    # Service operations
-
-    # Requests to open the blind. In practice we do not open then blind, we will instead tilt to the
-    # mid position. If the blind is in motion then is ignored.
-
-    async def async_open_cover(self, **kwargs):
-        """Open the cover by selecting the mid position."""
-        _LOGGER.info("Invoked async_open_cover")
-
-        await self._async_set_cover_position(BLIND_POS_OPEN)
-
-    # Requests to close the blind. If the blind is in motion then is ignored. Otherwise always close the blind so
-    # that we can be sure the blind is closed.
-
-    async def async_close_cover(self, **kwargs):
-        """Close the cover."""
-        _LOGGER.info("Invoked async_close_cover")
-
-        await self._async_set_cover_position(BLIND_POS_CLOSED)
-
-    # Requests to stop the blind. If the blind is not in motion then is ignored. Otherwise assume the blind
-    # is in a mid position.
-
-    async def async_stop_cover(self, **kwargs):
-        """Stop the cover."""
-        _LOGGER.info("Invoked async_stop_cover")
-
-        if self._state == STATE_CLOSING or self._state == STATE_OPENING:
-            # Stop the blind
-            _LOGGER.info("Blind is in motion - marking as partially closed")
-            await self._async_do_stop_blind()
-            await self._set_state(STATE_OPEN, BLIND_POS_STOPPED)
-        else:
-            _LOGGER.info("Blind is stationary - ignoring the request")
-
-    # Requests to set the position of the blind. If the blind is in motion then is ignored. We will use this
-    # to allow the blind to actually be opened. If the position is after the mid point then change into a close
-    # command which will ensure the blind is closed. Otherwise set he state to OPENING and open the blind.
-    # Then after a delay and marks as OPEN if the blind is still OPENING.
-
-    async def async_set_cover_position(self, **kwargs):
+    async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Move the cover to a specific position."""
-        _LOGGER.info("Invoked async_set_cover_position")
-
-        if self._ignore_bounce():
+        if not(self._is_moving):
             if ATTR_POSITION in kwargs:
-                await self._async_set_cover_position(kwargs[ATTR_POSITION])
+                position = kwargs[ATTR_POSITION]
+                if position > 85:
+                    _LOGGER.debug("async_set_cover_position: opening cover")
+                    await self._async_move_blind_to_step(LIFT_POS_OPEN)
+                elif position < 15:
+                    _LOGGER.debug("async_set_cover_position: closing cover")
+                    await self._async_move_blind_to_step(LIFT_POS_CLOSED)
+                else:
+                    _LOGGER.debug("async_set_cover_position: closing cover to PARTIAL")
+                    await self._async_move_blind_to_step(LIFT_POS_MID)
+        else:
+            _LOGGER.debug("async_set_cover_position: cover is in motion - ignoring")
 
-    # New service operations
 
-    async def async_update_cover_position(self, **kwargs):
+    async def async_toggle(self, **kwargs: Any) -> None:
+        """Toggle the entity."""
+        if self._is_moving:
+            _LOGGER.debug("async_toggle: cover is in motion - ignoring")
+        else:
+            if self._myattr_lift_step == LIFT_POS_OPEN:
+                await self.async_close_cover(**kwargs)
+            else:
+                await self.async_open_cover(**kwargs)
+
+
+    async def async_open_cover(self, **kwargs: Any) -> None:
+        """Move the cover up."""
+        if not(self._is_moving):
+            _LOGGER.debug("async_open_cover: RAISING cover")
+            await self._async_move_blind_to_step(LIFT_POS_OPEN)
+        else:
+            _LOGGER.debug("async_open_cover: cover is in motion - ignoring")
+
+
+    async def async_close_cover(self, **kwargs: Any) -> None:
+        """Move the cover down."""
+        if not(self._is_moving):
+            if self._myattr_close_to_mid:
+                _LOGGER.debug("async_close_cover: closing cover to PARTIAL")
+                await self._async_move_blind_to_step(LIFT_POS_MID)
+            else:
+                _LOGGER.debug("async_close_cover: closing cover to CLOSED")
+                await self._async_move_blind_to_step(LIFT_POS_CLOSED)
+        else:
+            _LOGGER.debug("async_close_cover: cover is in motion - ignoring")
+
+
+    async def async_stop_cover(self, **kwargs: Any) -> None:
+        """Stop the cover."""
+        if not(self._is_moving):
+            _LOGGER.debug("async_stop_cover: cover is not in motion - ignoring")
+        else:
+            _LOGGER.debug("async_stop_cover: stopping cover")
+            self._attr_is_closing = False
+            self._attr_is_open = False
+            self.async_write_ha_state()
+
+            await self._async_stop_blind()
+
+
+    async def async_update_cover_position(self, **kwargs) -> None:
         """Update the internal position."""
         _LOGGER.info("Invoked async_update_cover_position")
 
-        if ATTR_POSITION in kwargs:
-            self._lift_position = kwargs[ATTR_POSITION]
 
-            if self._lift_position < BLIND_POS_STOPPED:
-                self._lift_position = BLIND_POS_CLOSED
-                state = STATE_CLOSED
-            elif self._lift_position > BLIND_POS_STOPPED:
-                self._lift_position = BLIND_POS_OPEN
-                state = STATE_CLOSED
-            else:
-                self._lift_position = BLIND_POS_STOPPED
-                state = STATE_OPEN
-
-        await self._set_state(state, self._lift_position)
-
-    # Action functions
-
-    async def _async_set_cover_position(self, position):
-        """Move the cover to a specific position."""
-        _LOGGER.info("Invoked _async_set_cover_position")
-
-        if self._blind_is_stationary():
-            if position <= BLIND_POS_CLOSED:
-                _LOGGER.info("Closing blind with a delay...")
-                await self._async_do_close_blind()
-                await self._wait_and_set_state(self._blindCloseSecs, STATE_CLOSING, STATE_CLOSED, BLIND_POS_CLOSED)
-            elif position >= BLIND_POS_OPEN:
-                _LOGGER.info("Opening blind with a delay...")
-                await self._async_do_open_blind()
-                await self._wait_and_set_state(self._blindOpenSecs, STATE_OPENING, STATE_OPEN, BLIND_POS_OPEN)
-            else:
-                _LOGGER.info("Setting home pos on blind with a delay...")
-                await self._async_do_set_to_mid()
-                await self._wait_and_set_state(self._blindOpenSecs, STATE_OPENING, STATE_OPEN, BLIND_POS_STOPPED)
-
-    # Helper functions
-
-    async def async_set_movement_allowed(self, **kwargs):
-        """Set whether or not updates are allowed"""
-        _LOGGER.info("Invoked async_set_movement_allowed")
-
-        if ATTR_MOVEMENT_ALLOWED in kwargs:
-            self._allowMovement = kwargs[ATTR_MOVEMENT_ALLOWED]
-            _LOGGER.info("Movement allowed = " + str(self._allowMovement))
-
-    async def _set_state(self, newState, newLift):
-        self._state = newState
-        self._lift_position = newLift
-        self.async_write_ha_state()
-
-    async def _wait_and_set_state(self, delay, state, newState, newLift):
-        if delay > 0:
-            _LOGGER.info("Waiting secs = " + str(delay))
-            await asyncio.sleep(delay)
-
-        # If the blind is still moving then we have finished. Otherwise assume we were interrupted
-        if self._state == state:
-            _LOGGER.info("Finished blind action, setting state = " + newState)
-            await self._set_state(newState, newLift)
-        else:
-            _LOGGER.info(
-                "Finished blind action, state not as expected; " + self._state)
-
-    def _ignore_bounce(self):
-        last = self._lastCommandTime
-        self._lastCommandTime = time.time()
-        if (self._lastCommandTime - last) <= COMMAND_DEBOUNCE_SEC:
-            _LOGGER.info("Duplicate command - will ignore request")
-            return False
-        else:
-            return True
-
-    def _blind_is_stationary(self):
-        if self._state == STATE_OPENING or self._state == STATE_CLOSING:
-            _LOGGER.info("Blind is in motion - will ignore request")
-            return False
-        else:
-            return True
-
-    def _motion_allowed(self):
-        if self._allowMovement:
-            return True
-        else:
-            _LOGGER.debug("Blind motion is disabled")
-            return False
-
-    async def _async_send_command(self, cmd):
-        """Send a command to the blind"""
-        _LOGGER.info("LOW-LEVEL SENDING BLIND COMMAND - " + str(cmd))
-        if self._signalRepetitions >= 2:
-            for _ in range(self._signalRepetitions - 1):
-                await self._async_send(self._device.send_command, cmd)
-                await asyncio.sleep(self._signalRepetitionsDelay)
-        await self._async_send(self._device.send_command, cmd)
-
-    # Handle updates from cover device
-
-    async def async_update(self):
-        """Query the switch in this light switch and determine the state."""
-        _LOGGER.debug("Invoked async_update")
-
-    def _apply_event(self, event):
+    def _apply_event(self, event: rfxtrxmod.RFXtrxEvent) -> None:
         """Apply command from rfxtrx."""
-        _LOGGER.debug("Invoked _apply_event")
+        assert isinstance(event, rfxtrxmod.ControlEvent)
         super()._apply_event(event)
 
-    @ callback
-    def _handle_event(self, event, device_id):
+
+    @callback
+    def _handle_event(self, event: rfxtrxmod.RFXtrxEvent, device_id: DeviceTuple) -> None:
         """Check if event applies to me and update."""
-        _LOGGER.debug("Invoked _handle_event")
         if device_id != self._device_id:
             return
 
         self._apply_event(event)
         self.async_write_ha_state()
 
-    # --------------------------------------------------------------------------------
-    # Implementations for device specific actions
 
-    # Replace with action to close blind
-    async def _async_do_close_blind(self):
-        """Callback to close the blind"""
-        _LOGGER.info("LOW-LEVEL CLOSING BLIND")
-        await self._set_state(STATE_CLOSING, BLIND_POS_STOPPED)
-        await self._async_send_command(CMD_SOMFY_DOWN)
+    @property
+    def _is_moving(self) -> bool | None:
+        return self._attr_is_opening or self._attr_is_closing
 
-    # Replace with action to open blind
-    async def _async_do_open_blind(self):
-        """Callback to open the blind"""
-        _LOGGER.info("LOW-LEVEL OPENING BLIND")
-        await self._set_state(STATE_OPENING, BLIND_POS_STOPPED)
-        await self._async_send_command(CMD_SOMFY_UP)
 
-    # Replace with action to stop blind
-    async def _async_do_stop_blind(self):
-        """Callback to stop the blind"""
-        _LOGGER.info("LOW-LEVEL STOPPING BLIND")
-        await self._async_send_command(CMD_SOMFY_STOP)
+    @property
+    def entity_picture(self):
+        """Return the icon property."""
 
-    # Replace with action to tilt blind to mid position
-    async def _async_do_set_to_mid(self):
-        """Callback to tilt the blind to mid"""
-        _LOGGER.info("LOW-LEVEL SETTING BLIND TO MID")
-        await self._set_state(STATE_OPENING, BLIND_POS_STOPPED)
-        await self._async_send_command(CMD_SOMFY_STOP)
+        if self._myattr_custom_icon:
+            if self._is_moving:
+                icon = "move.svg"
+                closed = False
+            elif self._myattr_lift_step == LIFT_POS_OPEN:
+                icon = "99.svg"
+                closed = False
+            elif self._myattr_lift_step == LIFT_POS_MID:
+                icon = "50.svg"
+                closed = self._myattr_partial_is_closed
+            elif self._myattr_lift_step == LIFT_POS_CLOSED:
+                icon = "00.svg"
+                closed = True
+
+            if self._myattr_colour_open and not(closed):
+                icon = ICON_PATH + "/active/" + icon
+            else:
+                icon = ICON_PATH + "/inactive/" + icon
+
+            _LOGGER.debug("Returned icon attribute = " + icon)
+            return icon
+    
+        return None
+
+
+    def _pos_to_steps(self, position) -> int:
+        return int(round(position/ (100 / LIFT_POS_OPEN)))
+    
+
+    def _steps_to_pos(self, steps) -> int:
+        return int(round((steps / LIFT_POS_OPEN) * 100))
+
+
+    def _set_position(self, step) -> None:
+        if step < LIFT_POS_CLOSED:       
+            self._myattr_lift_step = LIFT_POS_CLOSED
+        elif step >= LIFT_POS_OPEN:       
+            self._myattr_lift_step = LIFT_POS_OPEN
+        else:       
+            self._myattr_lift_step = step
+
+        """Translate my lift position to HA position
+        None is unknown, 0 is closed, 100 is fully open."""
+
+        if self._myattr_lift_step == LIFT_POS_CLOSED:
+            self._attr_is_closed = True
+            self._attr_current_cover_position = 0
+        elif self._myattr_lift_step == LIFT_POS_MID:
+            self._attr_is_closed = self._myattr_partial_is_closed
+            self._attr_current_cover_position = 50
+        else:
+            self._attr_is_closed = False
+            self._attr_current_cover_position = 100
+
+        self._attr_is_opening = False
+        self._attr_is_closing = False
+
+        _LOGGER.debug("_set_position; set new position - closed = " + str(self._attr_is_closed) + " pos = " + str(self._attr_current_cover_position))
+
+
+    async def _async_wait_and_set_position(self, delay, step) -> None:
+        if delay > 0:
+            _LOGGER.info("_async_wait_and_set_position: Waiting secs = " + str(delay))
+
+            if step == LIFT_POS_OPEN:
+                self._attr_is_opening = True
+            elif step == LIFT_POS_CLOSED:
+                self._attr_is_closing = True
+            elif self._myattr_partial_is_closed:
+                self._attr_is_closing = True
+            else:
+                self._attr_is_opening = True
+            self.async_write_ha_state()
+
+            await asyncio.sleep(delay)
+
+        # If the blind is still closing then we have finished. Otherwise assume we were interrupted
+        if self._is_moving:
+            _LOGGER.info("_async_wait_and_set_position: Finished blind action, setting state")
+            self._set_position(step)
+            self.async_write_ha_state()
+        else:
+            _LOGGER.info(
+                "_async_wait_and_set_position: Finished blind action, state not as expected - not saving new state")
+
+
+    async def _async_raise_blind(self) -> None:
+        """Lift the cover."""
+        _LOGGER.info("Invoked _async_raise_blind")
+        await self._async_move_blind_to_step(LIFT_POS_OPEN)
+
+
+    async def _async_lower_blind(self) -> None:
+        """Lower the cover."""
+        _LOGGER.info("Invoked _async_lower_blind")
+        await self._async_move_blind_to_step(LIFT_POS_CLOSED)
+
+
+    async def _async_stop_blind(self) -> None:
+        """Stop the cover."""
+        _LOGGER.info("Invoked _async_stop_blind")
+    
+        await self._async_send(self._device.send_stop)
+
+
+    async def _async_move_blind_to_step(self, step) -> None:
+        """Move the cover to a preset position."""
+        _LOGGER.info("Invoked _async_move_blind_to_step; step = " + str(step))
+
+        if step == LIFT_POS_OPEN:
+            self._attr_is_opening = True
+            self._attr_current_cover_position = 50
+            self.async_write_ha_state()
+
+            _LOGGER.debug("_async_move_blind_to_step; sending UP and waiting")
+            await self._async_send(self._device.send_up05sec)
+            await self._async_wait_and_set_position(self._myattr_open_secs, LIFT_POS_OPEN)
+
+        elif step == LIFT_POS_MID:
+            self._attr_is_closing = self._myattr_partial_is_closed
+            self._attr_is_opening = not(self._myattr_partial_is_closed)
+            self._attr_current_cover_position = 50
+            self.async_write_ha_state()
+
+            _LOGGER.debug("_async_move_blind_to_step; sending STOP and waiting")
+            await self._async_send(self._device.send_stop)
+            await self._async_wait_and_set_position(self._myattr_open_secs, LIFT_POS_MID)
+
+        elif step == LIFT_POS_CLOSED:
+            self._attr_is_closing = True
+            self._attr_current_cover_position = 50
+            self.async_write_ha_state()
+
+            _LOGGER.debug("_async_move_blind_to_step; sending DOWN and waiting")
+            await self._async_send(self._device.send_down05sec)
+            await self._async_wait_and_set_position(self._myattr_close_secs, LIFT_POS_CLOSED)
+
+
+    async def _async_send(self, fun: Callable[[rfxtrxmod.PySerialTransport, *_Ts], None], *args: *_Ts) -> None:
+        """Send a command to the motor."""
+        _LOGGER.info("Invoked _async_send; command = " + fun.__name__)
+        await super()._async_send(fun, *args)
+
+
+    async def _async_send_repeat(self, fun: Callable[[rfxtrxmod.PySerialTransport, *_Ts], None], *args: *_Ts) -> None:
+        """Repeating send a command to the motor."""
+        _LOGGER.info("Invoked _async_send_repeat; command = " + fun.__name__)
+
+        if self._myattr_repetitions >= 2:
+            for _ in range(self._myattr_repetitions - 1):
+                await self._async_send(fun, *args)
+                await asyncio.sleep(self._myattr_repetition_delay)
+        await self._async_send(fun, *args)

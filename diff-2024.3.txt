@@ -1,0 +1,252 @@
+diff --color -p ../../../core/homeassistant/components/rfxtrx/config_flow.py rfxtrx/config_flow.py
+*** ../../../core/homeassistant/components/rfxtrx/config_flow.py	2024-03-01 18:17:53
+--- rfxtrx/config_flow.py	2024-03-07 14:20:39
+*************** RECV_MODES = sorted(itertools.chain(*rfxtrxmod.lowleve
+*** 59,64 ****
+--- 59,67 ----
+  
+  RECV_MODES = sorted(itertools.chain(*rfxtrxmod.lowlevel.Status.RECMODES))
+  
++ ##############################
++ from .ext import config_flow as ext_config_flow
++ ##############################
+  
+  class DeviceData(TypedDict):
+      """Dict data representing a device entry."""
+*************** class OptionsFlow(config_entries.OptionsFlow):
+*** 231,236 ****
+--- 234,246 ----
+                          CONF_VENETIAN_BLIND_MODE
+                      ]
+  
++                 ##############################
++                 ext_config_flow.update_device_options(
++                     device,
++                     user_input
++                 )
++                 ##############################
++ 
+                  self.update_config_data(
+                      global_options=self._global_options, devices=devices
+                  )
+*************** class OptionsFlow(config_entries.OptionsFlow):
+*** 292,297 ****
+--- 302,316 ----
+                      ),
+                  }
+              )
++ 
++         ##############################
++         ext_config_flow.update_data_schema(
++             data_schema,
++             self._selected_device_object,
++             device_data
++         )
++         ##############################
++ 
+          replace_devices = {
+              entry.id: entry.name_by_user if entry.name_by_user else entry.name
+              for entry in self._device_entries
+Only in rfxtrx: config_flow.py=base
+diff --color -p ../../../core/homeassistant/components/rfxtrx/cover.py rfxtrx/cover.py
+*** ../../../core/homeassistant/components/rfxtrx/cover.py	2023-06-05 20:04:47
+--- rfxtrx/cover.py	2024-03-07 14:24:03
+*************** _LOGGER = logging.getLogger(__name__)
+*** 24,30 ****
+--- 24,34 ----
+  
+  _LOGGER = logging.getLogger(__name__)
+  
++ ##############################
++ from .ext import cover as ext_cover
++ ##############################
+  
++ 
+  def supported(event: rfxtrxmod.RFXtrxEvent) -> bool:
+      """Return whether an event supports cover."""
+      return bool(event.device.known_to_be_rollershutter)
+*************** async def async_setup_entry(
+*** 43,48 ****
+--- 47,63 ----
+          device_id: DeviceTuple,
+          entity_info: dict[str, Any],
+      ) -> list[Entity]:
++         ##############################
++         cover = ext_cover.create_cover_entity(
++                     device=event.device,
++                     device_id=device_id,
++                     entity_info=entity_info,
++                     event=event if auto else None,
++                 )
++         if cover is not None:
++             return [cover]
++         ##############################
++ 
+          return [
+              RfxtrxCover(
+                  event.device,
+*************** async def async_setup_entry(
+*** 55,60 ****
+--- 70,79 ----
+      await async_setup_platform_entry(
+          hass, config_entry, async_add_entities, supported, _constructor
+      )
++ 
++     ##############################
++     await ext_cover.async_define_sync_services()
++     ##############################
+  
+  
+  class RfxtrxCover(RfxtrxCommandEntity, CoverEntity):
+Only in rfxtrx: cover.py-base
+Only in rfxtrx: ext
+diff --color -p ../../../core/homeassistant/components/rfxtrx/manifest.json rfxtrx/manifest.json
+*** ../../../core/homeassistant/components/rfxtrx/manifest.json	2024-03-01 18:17:53
+--- rfxtrx/manifest.json	2024-03-07 14:17:03
+***************
+*** 1,10 ****
+  {
+    "domain": "rfxtrx",
+!   "name": "RFXCOM RFXtrx",
+!   "codeowners": ["@danielhiversen", "@elupus", "@RobBie1221"],
+    "config_flow": true,
+!   "documentation": "https://www.home-assistant.io/integrations/rfxtrx",
+    "iot_class": "local_push",
+!   "loggers": ["RFXtrx"],
+!   "requirements": ["pyRFXtrx==0.31.0"]
+! }
+--- 1,18 ----
+  {
+    "domain": "rfxtrx",
+!   "name": "RFXCOM RFXtrx + state",
+!   "codeowners": [
+!     "@RJArmitage"
+!   ],
+    "config_flow": true,
+!   "documentation": "https://github.com/RJArmitage/rfxtrx-stateful-blinds",
+!   "issue_tracker": "https://github.com/RJArmitage/rfxtrx-stateful-blinds/issues",
+    "iot_class": "local_push",
+!   "loggers": [
+!     "RFXtrx"
+!   ],
+!   "requirements": [
+!     "pyRFXtrx==0.31.0"
+!   ],
+!   "version": "2023.3.0"
+! }
+\ No newline at end of file
+diff --color -p ../../../core/homeassistant/components/rfxtrx/services.yaml rfxtrx/services.yaml
+*** ../../../core/homeassistant/components/rfxtrx/services.yaml	2023-08-23 17:28:50
+--- rfxtrx/services.yaml	2024-03-07 14:48:02
+*************** send:
+*** 2,7 ****
+    fields:
+      event:
+        required: true
+!       example: "0b11009e00e6116202020070"
+        selector:
+          text:
+--- 2,31 ----
+    fields:
+      event:
+        required: true
+!       example: '0b11009e00e6116202020070'
+!       selector:
+!         text:
+! 
+! update_cover_position:
+!   target:
+!     entity:
+!       domain: cover
+!   fields:
+!     position:
+!       required: true
+!       selector:
+!         number:
+!           min: 0
+!           max: 100
+!           unit_of_measurement: '%'
+!     tilt_position:
+!       required: true
+!       selector:
+!         number:
+!           min: 0
+!           max: 100
+!           unit_of_measurement: '%'
+!     state:
+!       required: true
+        selector:
+          text:
+diff --color -p ../../../core/homeassistant/components/rfxtrx/strings.json rfxtrx/strings.json
+*** ../../../core/homeassistant/components/rfxtrx/strings.json	2024-02-21 18:07:25
+--- rfxtrx/strings.json	2024-03-07 14:48:21
+***************
+*** 58,64 ****
+            "command_on": "Data bits value for command on",
+            "command_off": "Data bits value for command off",
+            "venetian_blind_mode": "Venetian blind mode",
+!           "replace_device": "Select device to replace"
+          },
+          "title": "Configure device options"
+        }
+--- 58,79 ----
+            "command_on": "Data bits value for command on",
+            "command_off": "Data bits value for command off",
+            "venetian_blind_mode": "Venetian blind mode",
+!           "replace_device": "Select device to replace",
+!           "state_support": "Provide stateful support",
+!           "midpoint_supported": "Tilting Blind - Supports midpoint access",
+!           "midpoint_sync": "Sync when crossing midpoint",
+!           "midpoint_steps": "Tilting Blind - Steps to midpoint",
+!           "open_seconds": "Open time (secs)",
+!           "close_seconds": "Close time (secs)",
+!           "sync_seconds": "Mid open/close time (ms)",
+!           "tilt1_ms": "Tilting Blind - Lower tilt time from midpoint (ms)",
+!           "tilt2_ms": "Tilting Blind - Upper tilt time from midpoint (ms)",
+!           "custom_icon": "Custom cover icon",
+!           "colour_icon": "Highlight open cover",
+!           "partial_closed": "Highlight partially open as closed",
+!           "signal_repetitions": "Number of signal repetitions",
+!           "signal_repetition_delay": "Delay between signal repetitions (ms)",
+!           "roller_mid_on_close": "Roller blind close to midpoint"
+          },
+          "title": "Configure device options"
+        }
+***************
+*** 148,155 ****
+          "event": {
+            "name": "Event",
+            "description": "A hexadecimal string to send."
+          }
+        }
+      }
+    }
+! }
+--- 163,188 ----
+          "event": {
+            "name": "Event",
+            "description": "A hexadecimal string to send."
++         }
++       }
++     },
++     "update_cover_position": {
++       "name": "Update position",
++       "description": "Update position of a specific cover",
++       "fields": {
++         "position": {
++           "name": "Position",
++           "description": "Position of the cover"
++         },
++         "tilt_position": {
++           "name": "Tilt position",
++           "description": "Tilt position of the cover"
++         },
++         "state": {
++           "name": "State",
++           "description": "State of the cover"
+          }
+        }
+      }
+    }
+! }
+\ No newline at end of file

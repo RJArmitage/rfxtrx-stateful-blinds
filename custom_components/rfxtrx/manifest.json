@@ -1,13 +1,18 @@
 {
   "domain": "rfxtrx",
   "name": "RFXCOM RFXtrx + state",
-  "requirements": ["pyRFXtrx==0.28.0"],
-  "codeowners": ["@danielhiversen", "@elupus", "@RobBie1221"],
+  "codeowners": [
+    "@RJArmitage"
+  ],
   "config_flow": true,
+  "documentation": "https://github.com/RJArmitage/rfxtrx-stateful-blinds",
+  "issue_tracker": "https://github.com/RJArmitage/rfxtrx-stateful-blinds/issues",
   "iot_class": "local_push",
-  "loggers": ["RFXtrx"],
-
-  "version": "1.4.0",
-  "documentation": "https://github.com/RJArmitage/rfxtrx-state",
-  "issue_tracker": "https://github.com/RJArmitage/rfxtrx-state/issues"
+  "loggers": [
+    "RFXtrx"
+  ],
+  "requirements": [
+    "pyRFXtrx==0.31.0"
+  ],
+  "version": "2023.3.0"
 }
