@@ -1,6 +1,6 @@
 {
   "name": "RFXCOM RFXtrx Stateful Blinds",
-  "homeassistant": "2022.4.1",
+  "homeassistant": "2024.3.0",
   "iot_class": [
     "Assumed State"
   ],

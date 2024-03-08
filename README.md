@@ -60,23 +60,29 @@ If you've read to here and still want to try it then installation is best done t
 
 ## HACS (Recommended)
 
-This is the recommended way to install rfxtrx-stateful-blinds-icons. However as the package replaces the standard **_RFXCOM RFXtrx_** integration it is not available in the default HACS Community Store.
+This is the recommended way to install **_rfxtrx-stateful-blinds_** as any updates will be installed automatically. However as the package replaces the standard **_RFXCOM RFXtrx_** integration it is not available in the default HACS Community Store.
 
 To install:
 
 - Open HACS (installation instructions are [here](https://hacs.xyz/docs/installation/installation/))
-- Go to "Integrations" section
-- Click the top-rigfht button with a "hamburger" icon
-- Select "Custom repositories"
-  - Enter the Repository URL **https://github.com/RJArmitage/rfxtrx-stateful-blinds**
-  - Enter the Category **Integration**
-  - Click **_ADD_**
+- Go to the "**Integrations**" section
+- Click the top-right button with a "**hamburger**" icon "<img src="https://raw.githubusercontent.com/RJArmitage/rfxtrx-stateful-blinds/main/hamburger-icon.png" alt="Hambuger icon"/>"
+- Select "**Custom repositories**"
+  - Enter the Repository URL "**https://github.com/RJArmitage/rfxtrx-stateful-blinds**"
+  - Enter the Category "**Integration**"
+  - Click "**ADD**"
 - Close the dialog
-- You should now see "**_RFXCOM RFXtrx Stateful Blind Icons_**". Click and install it as usual
+- You should now see "**_RFXCOM RFXtrx Stateful Blinds Icons_**" in the integrations list. Click and install it as usual
 
-If you want the stateful blinds icons then you'll also need to install the [RFXCOM RFXtrx Stateful Blind Icons](https://github.com/RJArmitage/rfxtrx-stateful-blinds-icons) package. That's a little easier as it should be available by default in HACS:
+## Manual installation
 
-- Open HACS
-- Go to "Frontend" section
-- Click the button with an "+" icon
-- Search for "RFXCOM RFXtrx Stateful Blind Icons" and install it
+1. Download the contents of the "`custom_components/rfxtrx`" folder from this project into a new folder "`<config>/custom_components/rfxtrx`" where "`<config>`" is the directory where your "`configuration.yaml`" file is located - so for example "`/root/config/custom_components/rfxtrx`"
+
+2. Restart Home Assistant
+
+If you want the stateful blinds icons then you'll also need to install the [RFXCOM RFXtrx Stateful Blinds Icons](https://github.com/RJArmitage/rfxtrx-stateful-blinds-icons) package. That's a little easier as it should be available by default in HACS:
+
+- Open HACS (installation instructions are [here](https://hacs.xyz/docs/installation/installation/))
+- Go to the "**Frontend**" section
+- Click the button with an "**+**" icon
+- Search for "**RFXCOM RFXtrx Stateful Blind Icons**" and install it

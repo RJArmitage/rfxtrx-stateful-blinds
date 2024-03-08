@@ -118,7 +118,8 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
             await self._async_wait_and_set_position(self._myattr_close_secs, False, tilt_step)
 
         elif tilt_step == 1:
-            self._attr_is_opening = True
+            self._attr_is_closing = self._myattr_partial_is_closed
+            self._attr_is_opening = not(self._myattr_partial_is_closed)
             self.async_write_ha_state()
 
             _LOGGER.debug("_async_tilt_blind_to_step; tilting CMD_VOGUE_45_DEGREES and waiting " + str(self._myattr_tilt_pos1_secs))
@@ -134,7 +135,8 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
             await self._async_wait_and_set_position(self._myattr_open_secs, False, tilt_step)
 
         elif tilt_step == 3:
-            self._attr_is_opening = True
+            self._attr_is_closing = self._myattr_partial_is_closed
+            self._attr_is_opening = not(self._myattr_partial_is_closed)
             self.async_write_ha_state()
 
             _LOGGER.debug("_async_tilt_blind_to_step; tilting CMD_VOGUE_135_DEGREES and waiting " + str(self._myattr_tilt_pos2_secs))
@@ -142,7 +144,7 @@ class LouvoliteVogueBlind(AbstractTiltingCover):
             await self._async_wait_and_set_position(self._myattr_open_secs, False, tilt_step)
 
         else:
-            self._attr_is_opening = True
+            self._attr_is_closing = True
             self.async_write_ha_state()
 
             _LOGGER.debug("_async_tilt_blind_to_step; tilting CMD_VOGUE_CLOSE_CW and waiting " + str(self._myattr_tilt_pos2_secs))

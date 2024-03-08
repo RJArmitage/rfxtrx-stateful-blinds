@@ -129,10 +129,11 @@ class SomfyVenetianBlind(AbstractTiltingCover):
 
                 _LOGGER.debug("_async_tilt_blind_to_step; tilting to MID and waiting " + str(sync_time))
                 await self._async_send(self._device.send_stop)
-                await self._async_wait_and_set_position(sync_time, False, TILT_MID_STEP)
+                await self._async_wait_and_set_position(sync_time, False, tilt_step)
 
             if tilt_step == 1:
-                self._attr_is_opening = True
+                self._attr_is_closing = self._myattr_partial_is_closed
+                self._attr_is_opening = not(self._myattr_partial_is_closed)
                 self.async_write_ha_state()
 
                 _LOGGER.debug("_async_tilt_blind_to_step; tilting DOWN and waiting " + str(self._myattr_tilt_pos1_secs))
@@ -143,7 +144,8 @@ class SomfyVenetianBlind(AbstractTiltingCover):
                 self._set_position(False, tilt_step)
                 self.async_write_ha_state()
             elif tilt_step == 3:
-                self._attr_is_opening = True
+                self._attr_is_closing = self._myattr_partial_is_closed
+                self._attr_is_opening = not(self._myattr_partial_is_closed)
                 self.async_write_ha_state()
 
                 _LOGGER.debug("_async_tilt_blind_to_step; tilting UP and waiting " + str(self._myattr_tilt_pos2_secs))

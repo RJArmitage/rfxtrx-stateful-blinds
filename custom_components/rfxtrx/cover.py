@@ -28,6 +28,7 @@ _LOGGER = logging.getLogger(__name__)
 from .ext import cover as ext_cover
 ##############################
 
+
 def supported(event: rfxtrxmod.RFXtrxEvent) -> bool:
     """Return whether an event supports cover."""
     return bool(event.device.known_to_be_rollershutter)
@@ -73,6 +74,7 @@ async def async_setup_entry(
     ##############################
     await ext_cover.async_define_sync_services()
     ##############################
+
 
 class RfxtrxCover(RfxtrxCommandEntity, CoverEntity):
     """Representation of a RFXtrx cover."""

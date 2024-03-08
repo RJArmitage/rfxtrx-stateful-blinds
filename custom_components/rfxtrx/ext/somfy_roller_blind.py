@@ -315,7 +315,8 @@ class SomfyRollerBlind(RfxtrxCommandEntity, CoverEntity):
             await self._async_wait_and_set_position(self._myattr_open_secs, LIFT_POS_OPEN)
 
         elif step == LIFT_POS_MID:
-            self._attr_is_closing = True
+            self._attr_is_closing = self._myattr_partial_is_closed
+            self._attr_is_opening = not(self._myattr_partial_is_closed)
             self._attr_current_cover_position = 50
             self.async_write_ha_state()
 

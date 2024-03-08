@@ -253,7 +253,9 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
             state = kwargs[ATTR_STATE]
             if state == STATE_CLOSING:
                 self._attr_is_closing = True
+                self._attr_is_opening = False
             elif state == STATE_OPENING:
+                self._attr_is_closing = False
                 self._attr_is_opening = True
 
         if old_cover_position != self._attr_current_cover_position or \
@@ -348,13 +350,21 @@ class AbstractTiltingCover(RfxtrxCommandEntity, CoverEntity):
             _LOGGER.info("_async_wait_and_set_position: Waiting secs = " + str(delay))
 
             if is_raised and not(self._myattr_is_raised):
+                self._attr_is_closing = False
                 self._attr_is_opening = True
             elif not(is_raised) and self._myattr_is_raised:
                 self._attr_is_closing = True
-            elif tilt_step == 0 or tilt_step >= TILT_MAX_STEP:
+                self._attr_is_opening = False
+            elif tilt_step <= TILT_MIN_STEP or tilt_step >= TILT_MAX_STEP:
                 self._attr_is_closing = True
-            else:
+                self._attr_is_opening = False
+            elif tilt_step == TILT_MID_STEP:
+                self._attr_is_closing = False
                 self._attr_is_opening = True
+            else:
+                self._attr_is_closing = self._myattr_partial_is_closed
+                self._attr_is_opening = not(self._myattr_partial_is_closed)
+
             self.async_write_ha_state()
 
             await asyncio.sleep(delay)
