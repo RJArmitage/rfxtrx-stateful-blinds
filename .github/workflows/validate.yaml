@@ -1,16 +1,11 @@
 name: 'Validate'
 
 on:
-  workflow_dispatch:
-  # schedule:
-  #   - cron:  "0 0 * * *"
   push:
-    branches:
-      # - 'main'
-      - 'dev/2024.02-compatibility'
   pull_request:
-    branches:
-      - 'main'
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
 
 jobs:
   hassfest: # https://developers.home-assistant.io/blog/2020/04/16/hassfest
@@ -34,5 +29,7 @@ jobs:
         uses: 'hacs/action@main'
         with:
           category: 'integration'
-          # Remove this 'ignore' key when you have added brand images for your integration to https://github.com/home-assistant/brands
+
+          # Do not remove this key as we cannot add brands as they are already present
+          # for the integration we override
           ignore: 'brands'
